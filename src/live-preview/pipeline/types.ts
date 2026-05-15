@@ -3,25 +3,22 @@ import { EditorView } from '@codemirror/view';
 import { Text, Line } from '@codemirror/state';
 import { App, Component } from 'obsidian';
 import { PandocExtendedMarkdownSettings } from '../../core/settings';
-import { PlaceholderContext } from '../../shared/utils/placeholderProcessor';
-import { FencedDivTypeCounters } from '../../shared/utils/fencedDivReferenceMetadata';
 import { FencedDivReference, FencedDivStackItem } from '../../shared/types/fencedDivTypes';
 
 /**
  * Represents a region of content that needs inline processing
  */
-type ListStructure = 'hash-list' | 'fancy-list' | 'example-list' | 'custom-label-list' | 'definition' | 'standard-list' | 'fenced-div';
+type ListStructure = 'fenced-div';
 
 export interface ContentRegion {
     from: number;
     to: number;
-    type: 'list-content' | 'definition-content' | 'paragraph' | 'normal' | 'fenced-div-content';
+    type: 'fenced-div-content' | 'normal';
     parentStructure?: ListStructure;
     metadata?: {
         label?: string;
-        isDuplicate?: boolean;
         [key: string]: unknown;
-    }; // Structure-specific metadata
+    };
 }
 
 /**
@@ -34,21 +31,9 @@ export interface ProcessingContext {
     settings: PandocExtendedMarkdownSettings;
     app?: App;
     component?: Component;
+    filePath?: string;
     
-    // Scanned data (pre-computed)
-    exampleLabels: Map<string, number>;
-    exampleContent: Map<string, string>;
-    exampleLineNumbers: Map<number, number>;
-    duplicateExampleLabels: Map<string, number>;
-    duplicateExampleContent: Map<string, string>;
-    duplicateExampleLineNumbers?: Set<number>;
-    customLabels: Map<string, string>;
-    rawToProcessed: Map<string, string>;
-    duplicateCustomLabels: Set<string>;
-    duplicateCustomLineInfo?: Map<string, { firstLine: number; firstContent: string }>;
     fencedDivLabels?: Map<string, FencedDivReference>;
-    placeholderContext: PlaceholderContext;
-    invalidLines: Set<number>;
     
     // Processing metadata
     contentRegions: ContentRegion[];
@@ -56,21 +41,10 @@ export interface ProcessingContext {
     inlineDecorations: Array<{from: number, to: number, decoration: Decoration}>;
     
     // State tracking
-    hashCounter: { value: number };
-    definitionState: {
-        lastWasItem: boolean;
-        pendingBlankLine: boolean;
-    };
-    listContext?: {
-        isInList: boolean;
-        contentStartColumn: number;
-        listLevel: number;
-        parentStructure?: ListStructure;
-    };
     fencedDivStack?: FencedDivStackItem[];
-    fencedDivTypeCounters?: FencedDivTypeCounters;
     fencedDivCanOpenAtCurrentLine?: boolean;
     fencedDivBoundaryLine?: number;
+    sectionNumbers?: Map<number, string>;
     
     // Code regions to skip
     codeRegions?: Array<{from: number, to: number, type: string}>;

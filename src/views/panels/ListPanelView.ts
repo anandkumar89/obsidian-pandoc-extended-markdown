@@ -1,5 +1,5 @@
 // External libraries
-import { ItemView, WorkspaceLeaf, MarkdownView, HoverLinkSource } from 'obsidian';
+import { ItemView, WorkspaceLeaf, MarkdownView, HoverLinkSource, TFile } from 'obsidian';
 
 // Types
 import { PanelModule, PanelTabInfo } from './modules/PanelTypes';
@@ -9,19 +9,16 @@ import { UI_CONSTANTS, ICONS, CSS_CLASSES } from '../../core/constants';
 
 // Utils
 import { handleError } from '../../shared/utils/errorHandler';
-import {
-    isCustomLabelListsEnabled,
-    isSyntaxFeatureEnabled,
-    normalizeSettings
-} from '../../shared/types/settingsTypes';
+import { isSyntaxFeatureEnabled, normalizeSettings } from '../../shared/types/settingsTypes';
 
-// Internal modules
-import { CustomLabelPanelModule } from './modules/CustomLabelPanelModule';
-import { ExampleListPanelModule } from './modules/ExampleListPanelModule';
-import { DefinitionListPanelModule } from './modules/DefinitionListPanelModule';
-import { FootnotePanelModule } from './modules/FootnotePanelModule';
 import { FencedDivPanelModule } from './modules/FencedDivPanelModule';
+import { EquationPanelModule } from './modules/EquationPanelModule';
+import { FigurePanelModule } from './modules/FigurePanelModule';
+import { TocPanelModule } from './modules/TocPanelModule';
+import { ExportPanelModule } from './modules/ExportPanelModule';
+import { CitationPanelModule } from './modules/CitationPanelModule';
 import { PandocExtendedMarkdownPlugin } from '../../core/main';
+import { LongformProjectManager } from '../../core/state/longformProjectManager';
 
 export const VIEW_TYPE_LIST_PANEL = 'list-panel-view';
 
@@ -31,7 +28,9 @@ export class ListPanelView extends ItemView {
     private activePanel: PanelModule | null = null;
     private updateTimer: number | null = null;
     private lastActiveMarkdownView: MarkdownView | null = null;
-    private iconRowEl: HTMLElement | null = null;
+    private currentSearchQuery = '';
+    private topBarEl: HTMLElement | null = null;
+    private moduleActionsEl: HTMLElement | null = null;
     private contentContainerEl: HTMLElement | null = null;
     hoverLinkSource: HoverLinkSource;
     
@@ -51,70 +50,71 @@ export class ListPanelView extends ItemView {
     private initializePanels(): void {
         const availablePanels: PanelTabInfo[] = [];
         
-        // Register all available panels
-        if (isCustomLabelListsEnabled(this.plugin.settings)) {
-            const customLabelModule = new CustomLabelPanelModule(this.plugin);
-            availablePanels.push({
-                id: customLabelModule.id,
-                displayName: customLabelModule.displayName,
-                icon: customLabelModule.icon,
-                module: customLabelModule
-            });
-        }
-        
-        if (isSyntaxFeatureEnabled(this.plugin.settings, 'enableExampleLists')) {
-            const exampleListModule = new ExampleListPanelModule(this.plugin);
-            availablePanels.push({
-                id: exampleListModule.id,
-                displayName: exampleListModule.displayName,
-                icon: exampleListModule.icon,
-                module: exampleListModule
-            });
-        }
-        
-        if (isSyntaxFeatureEnabled(this.plugin.settings, 'enableDefinitionLists')) {
-            const definitionListModule = new DefinitionListPanelModule(this.plugin);
-            availablePanels.push({
-                id: definitionListModule.id,
-                displayName: definitionListModule.displayName,
-                icon: definitionListModule.icon,
-                module: definitionListModule
-            });
-        }
+        // TOC panel
+        const tocModule = new TocPanelModule(this.plugin);
+        availablePanels.push({
+            id: tocModule.id,
+            displayName: tocModule.displayName,
+            icon: tocModule.icon,
+            module: tocModule
+        });
 
+        // Fenced divs panel (Blocks)
         if (isSyntaxFeatureEnabled(this.plugin.settings, 'enableFencedDivs')) {
             const fencedDivModule = new FencedDivPanelModule(this.plugin);
             availablePanels.push({
                 id: fencedDivModule.id,
-                displayName: fencedDivModule.displayName,
+                displayName: 'Blocks',
                 icon: fencedDivModule.icon,
                 module: fencedDivModule
             });
         }
-
-        const footnoteModule = new FootnotePanelModule(this.plugin);
+        
+        // Equations panel
+        const equationModule = new EquationPanelModule(this.plugin);
         availablePanels.push({
-            id: footnoteModule.id,
-            displayName: footnoteModule.displayName,
-            icon: footnoteModule.icon,
-            module: footnoteModule
+            id: equationModule.id,
+            displayName: equationModule.displayName,
+            icon: equationModule.icon,
+            module: equationModule
         });
-        
-        // Sort panels according to settings order
-        const panelOrder = this.plugin.settings.panelOrder || ['custom-labels', 'example-lists', 'definition-lists', 'fenced-divs', 'footnotes'];
-        this.panels = [];
-        
-        // First, add panels in the specified order
-        for (const panelId of panelOrder) {
-            const panel = availablePanels.find(p => p.id === panelId);
-            if (panel) {
-                this.panels.push(panel);
-            }
+
+        // Figures/Tables panel
+        const figureModule = new FigurePanelModule(this.plugin);
+        availablePanels.push({
+            id: figureModule.id,
+            displayName: 'Figures/Tables',
+            icon: figureModule.icon,
+            module: figureModule
+        });
+
+        // Export/Settings panel
+        const exportModule = new ExportPanelModule(this.plugin);
+        availablePanels.push({
+            id: exportModule.id,
+            displayName: exportModule.displayName,
+            icon: exportModule.icon,
+            module: exportModule
+        });
+
+        // Citations panel
+        if (isSyntaxFeatureEnabled(this.plugin.settings, 'enableCitations')) {
+            const citationModule = new CitationPanelModule(this.plugin);
+            availablePanels.push({
+                id: citationModule.id,
+                displayName: citationModule.displayName,
+                icon: citationModule.icon,
+                module: citationModule
+            });
         }
         
-        // Then, add any panels that weren't in the order (for extensibility)
-        for (const panel of availablePanels) {
-            if (!this.panels.some(p => p.id === panel.id)) {
+        // Use fixed order for the top bar
+        const fixedOrder = ['toc', 'fenced-divs', 'equations', 'figures', 'citations', 'export'];
+        this.panels = [];
+        
+        for (const panelId of fixedOrder) {
+            const panel = availablePanels.find(p => p.id === panelId);
+            if (panel) {
                 this.panels.push(panel);
             }
         }
@@ -129,8 +129,7 @@ export class ListPanelView extends ItemView {
     }
     
     getIcon(): string {
-        // Return the custom icon ID that was registered in main.ts
-        return ICONS.LIST_PANEL_ID;
+        return 'book-open';
     }
     
     async onOpen() {
@@ -189,71 +188,80 @@ export class ListPanelView extends ItemView {
             cls: CSS_CLASSES.LIST_PANEL_VIEW_CONTAINER
         });
         
-        this.iconRowEl = viewContainer.createDiv({
-            cls: CSS_CLASSES.LIST_PANEL_ICON_ROW
-        });
-        
-        for (const panel of this.panels) {
-            const iconButton = this.iconRowEl.createDiv({
-                cls: CSS_CLASSES.LIST_PANEL_ICON_BUTTON,
-                attr: {
-                    'aria-label': panel.displayName,
-                    'data-panel-id': panel.id
-                }
-            });
-            
-            // Create icon container
-            const iconContainer = iconButton.createDiv({
-                cls: CSS_CLASSES.LIST_PANEL_ICON_CONTAINER
-            });
-            
-            // Create icon based on panel ID using CSS classes
-            // This avoids innerHTML and allows theme customization
-            if (panel.id === 'custom-labels') {
-                // Create custom label icon using text element
-                iconContainer.createSpan({
-                    cls: CSS_CLASSES.LIST_PANEL_ICON_CUSTOM_LABEL,
-                    text: '{::}'
-                });
-            } else if (panel.id === 'example-lists') {
-                // Create example list icon using text element
-                iconContainer.createSpan({
-                    cls: CSS_CLASSES.LIST_PANEL_ICON_EXAMPLE_LIST,
-                    text: '(@)'
-                });
-            } else if (panel.id === 'definition-lists') {
-                // Create definition list icon using text element
-                iconContainer.createSpan({
-                    cls: CSS_CLASSES.LIST_PANEL_ICON_DEFINITION_LIST,
-                    text: 'DL:'
-                });
-            } else if (panel.id === 'fenced-divs') {
-                iconContainer.createSpan({
-                    cls: CSS_CLASSES.LIST_PANEL_ICON_FENCED_DIV,
-                    text: ':::'
-                });
-            } else if (panel.id === 'footnotes') {
-                iconContainer.createSpan({
-                    cls: CSS_CLASSES.LIST_PANEL_ICON_FOOTNOTE,
-                    text: '[^]'
-                });
-            } else {
-                // For future panels, add a generic icon class
-                iconContainer.addClass(`pem-icon-${panel.id}`);
-            }
-            
-            iconButton.addEventListener('click', () => {
-                this.switchToPanel(panel);
-            });
+        // Top bar: tabs on left, search and settings on right
+        this.topBarEl = viewContainer.createDiv({ cls: 'pem-panel-top-bar' });
+
+        const tabsEl = this.topBarEl.createDiv({ cls: 'pem-panel-tabs' });
+
+        // Main modules
+        const mainTabsOrder = ['toc', 'fenced-divs', 'equations', 'figures', 'citations'];
+        for (const panelId of mainTabsOrder) {
+            const panel = this.panels.find(p => p.id === panelId);
+            if (!panel) continue;
+            this.renderTabButton(tabsEl, panel);
         }
+
+        const rightActionsEl = this.topBarEl.createDiv({ cls: 'pem-panel-right-actions' });
+
+        // Search toggle
+        const searchToggleBtn = rightActionsEl.createDiv({ 
+            cls: 'pem-panel-tab pem-search-toggle',
+            attr: { 'aria-label': 'Search' }
+        });
+        const { setIcon } = require('obsidian');
+        setIcon(searchToggleBtn, 'search');
         
-        viewContainer.createEl('hr', {
-            cls: CSS_CLASSES.LIST_PANEL_SEPARATOR
+        // Export/Settings
+        const exportPanel = this.panels.find(p => p.id === 'export');
+        if (exportPanel) {
+            this.renderTabButton(rightActionsEl, exportPanel);
+        }
+
+        // Search bar (toggleable)
+        const searchBarEl = viewContainer.createDiv({ cls: 'pem-panel-search-bar is-hidden' });
+        const searchContainer = searchBarEl.createDiv({ cls: 'pem-search-input-container' });
+        
+        const searchIconEl = searchContainer.createDiv({ cls: 'pem-search-icon-inner' });
+        setIcon(searchIconEl, 'search');
+        
+        const searchInput = searchContainer.createEl('input', {
+            cls: 'pem-panel-search-input',
+            attr: {
+                type: 'text',
+                placeholder: 'Search...'
+            }
         });
         
+        searchToggleBtn.addEventListener('click', () => {
+            searchBarEl.classList.toggle('is-hidden');
+            if (!searchBarEl.classList.contains('is-hidden')) {
+                searchInput.focus();
+            }
+        });
+
+        // Hide when clicking away if empty
+        this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+            if (!searchBarEl.contains(evt.target as Node) && 
+                !searchToggleBtn.contains(evt.target as Node) && 
+                searchInput.value === '') {
+                searchBarEl.addClass('is-hidden');
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            this.currentSearchQuery = searchInput.value;
+            if (this.activePanel) {
+                this.activePanel.setSearchQuery(this.currentSearchQuery);
+                void this.updateView();
+            }
+        });
+
         this.contentContainerEl = viewContainer.createDiv({
             cls: CSS_CLASSES.LIST_PANEL_CONTENT_CONTAINER
         });
+
+        // Module actions container at the BOTTOM
+        this.moduleActionsEl = viewContainer.createDiv({ cls: 'pem-module-actions-container' });
         
         if (this.panels.length > 0) {
             this.switchToPanel(this.panels[0]);
@@ -269,21 +277,61 @@ export class ListPanelView extends ItemView {
             this.activePanel.onDeactivate();
         }
         
-        const allButtons = this.iconRowEl?.querySelectorAll(`.${CSS_CLASSES.LIST_PANEL_ICON_BUTTON}`);
-        allButtons?.forEach(btn => btn.removeClass(CSS_CLASSES.LIST_PANEL_ICON_ACTIVE));
+        const allButtons = this.topBarEl?.querySelectorAll('.pem-panel-tab');
+        allButtons?.forEach(btn => btn.removeClass('is-active'));
         
-        const activeButton = this.iconRowEl?.querySelector(`[data-panel-id="${panelInfo.id}"]`);
-        activeButton?.addClass(CSS_CLASSES.LIST_PANEL_ICON_ACTIVE);
+        const activeButton = this.topBarEl?.querySelector(`[data-panel-id="${panelInfo.id}"]`);
+        activeButton?.addClass('is-active');
         
         this.activePanel = panelInfo.module;
+        this.activePanel.setSearchQuery(this.currentSearchQuery);
+
+        // Render module-specific action buttons in the top bar
+        if (this.moduleActionsEl) {
+            this.moduleActionsEl.empty();
+            if (this.activePanel.renderActions) {
+                this.activePanel.renderActions(this.moduleActionsEl, this.lastActiveMarkdownView);
+            }
+        }
         
         if (this.contentContainerEl) {
             this.contentContainerEl.empty();
-            
             this.activePanel.onActivate(this.contentContainerEl, this.lastActiveMarkdownView);
         }
     }
     
+    private renderTabButton(container: HTMLElement, panel: PanelTabInfo): void {
+        const tabBtn = container.createDiv({
+            cls: 'pem-panel-tab',
+            attr: {
+                'aria-label': panel.displayName,
+                'data-panel-id': panel.id
+            }
+        });
+        
+        const { setIcon } = require('obsidian');
+        
+        if (panel.id === 'toc') {
+            setIcon(tabBtn, 'list');
+        } else if (panel.id === 'fenced-divs') {
+            setIcon(tabBtn, 'box');
+        } else if (panel.id === 'equations') {
+            setIcon(tabBtn, 'sigma');
+        } else if (panel.id === 'figures') {
+            setIcon(tabBtn, 'image');
+        } else if (panel.id === 'export') {
+            setIcon(tabBtn, 'settings');
+        } else if (panel.id === 'citations') {
+            setIcon(tabBtn, 'quote');
+        } else {
+            setIcon(tabBtn, 'layout');
+        }
+        
+        tabBtn.addEventListener('click', () => {
+            this.switchToPanel(panel);
+        });
+    }
+
     private scheduleUpdate(): void {
         if (this.updateTimer) {
             window.clearTimeout(this.updateTimer);
@@ -297,19 +345,44 @@ export class ListPanelView extends ItemView {
     updateView(): Promise<void> {
         return Promise.resolve().then(() => {
             try {
-                // Use proper API to get active markdown view
                 let markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                const pm = LongformProjectManager.getInstance();
                 
-                if (markdownView && markdownView.file) {
+                // If pinned file exists, use it instead of active view
+                const pinnedFilePath = pm.getPinnedFilePath();
+                if (pinnedFilePath) {
+                    const file = this.app.vault.getAbstractFileByPath(pinnedFilePath);
+                    if (file instanceof TFile) {
+                        // We need a MarkdownView. If the file is open, we can find its view.
+                        // If not, we might need a "mock" view or handle null in modules.
+                        const leaves = this.app.workspace.getLeavesOfType('markdown');
+                        const targetLeaf = leaves.find(l => (l.view as MarkdownView).file?.path === pinnedFilePath);
+                        if (targetLeaf) {
+                            markdownView = targetLeaf.view as MarkdownView;
+                        } else {
+                            // If not open, modules should handle null activeView by using the pinned project/file path
+                            markdownView = null;
+                        }
+                    }
+                } else if (markdownView && markdownView.file) {
                     this.lastActiveMarkdownView = markdownView;
-                }
-                
-                if (!markdownView || !markdownView.file) {
-                    markdownView = this.lastActiveMarkdownView;
+                } else if (!markdownView) {
+                    // Check if a project is pinned
+                    if (pm.getPinnedProjectPath()) {
+                        markdownView = this.lastActiveMarkdownView;
+                    }
                 }
                 
                 if (this.activePanel && this.activePanel.shouldUpdate()) {
-                    this.activePanel.onUpdate(markdownView);
+                    this.activePanel.onUpdate(markdownView || null);
+                    
+                    // Refresh module actions too
+                    if (this.moduleActionsEl) {
+                        this.moduleActionsEl.empty();
+                        if (this.activePanel.renderActions) {
+                            this.activePanel.renderActions(this.moduleActionsEl, markdownView || null);
+                        }
+                    }
                 }
             } catch (error) {
                 handleError(error, 'Update list panel view');
@@ -317,19 +390,16 @@ export class ListPanelView extends ItemView {
         });
     }
     
-    getCustomLabels(): Array<{ label: string; content: string; lineNumber: number }> {
-        const customLabelPanel = this.panels.find(p => p.id === 'custom-labels');
-        if (customLabelPanel && customLabelPanel.module instanceof CustomLabelPanelModule) {
-            return customLabelPanel.module.getCustomLabels();
+
+    public syncActiveHeading(filePath: string, lineNumber: number): void {
+        if (this.activePanel && this.activePanel.id === 'toc' && this.activePanel.setActiveHeading) {
+            this.activePanel.setActiveHeading(filePath, lineNumber);
         }
-        return [];
     }
-    
+
     refreshPanels(): void {
-        // Store current active panel id
         const activePanelId = this.activePanel?.id;
         
-        // Destroy all current panels
         for (const panel of this.panels) {
             if (panel.module === this.activePanel) {
                 panel.module.onDeactivate();
@@ -337,17 +407,12 @@ export class ListPanelView extends ItemView {
             panel.module.destroy();
         }
         
-        // Clear panels array
         this.panels = [];
         this.activePanel = null;
         
-        // Re-initialize panels with current settings
         this.initializePanels();
-        
-        // Re-render the view
         this.renderView();
         
-        // Try to restore previously active panel if it still exists
         if (activePanelId) {
             const panelToRestore = this.panels.find(p => p.id === activePanelId);
             if (panelToRestore) {

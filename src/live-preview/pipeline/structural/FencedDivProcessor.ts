@@ -1,25 +1,20 @@
 import { Decoration } from '@codemirror/view';
 import { Line } from '@codemirror/state';
 import { CSS_CLASSES } from '../../../core/constants';
-import {
-    isFencedDivExtrasEnabled,
-    isSyntaxFeatureEnabled
-} from '../../../shared/types/settingsTypes';
+import { isSyntaxFeatureEnabled } from '../../../shared/types/settingsTypes';
 import { FencedDivStackItem } from '../../../shared/types/fencedDivTypes';
 import { ProcessingContext, StructuralResult } from '../types';
-import { BaseStructuralProcessor } from './BaseStructuralProcessor';
+import { StructuralProcessor } from '../types';
 import {
-    getFencedDivCssClasses,
+    getFencedDivCssClass,
+    getFencedDivDisplayName,
     isFencedDivClosing,
     parseFencedDivOpening
 } from './fencedDiv/parser';
 import { FencedDivClosingWidget, FencedDivHeaderWidget } from '../../widgets';
-import {
-    createFencedDivReferenceMetadata,
-    getFencedDivTitle
-} from '../../../shared/utils/fencedDivReferenceMetadata';
+import { LongformProjectManager } from '../../../core/state/longformProjectManager';
 
-export class FencedDivProcessor extends BaseStructuralProcessor {
+export class FencedDivProcessor implements StructuralProcessor {
     name = 'fenced-div';
     priority = 18;
     private readonly maxDepthClass = 6;
@@ -29,7 +24,7 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
             return false;
         }
 
-        if (this.canOpenAtCurrentLine(context) && parseFencedDivOpening(line.text, context.settings)) {
+        if (this.canOpenAtCurrentLine(context) && parseFencedDivOpening(line.text)) {
             return true;
         }
 
@@ -39,34 +34,25 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
 
     process(line: Line, context: ProcessingContext): StructuralResult {
         const opening = this.canOpenAtCurrentLine(context)
-            ? parseFencedDivOpening(line.text, context.settings)
+            ? parseFencedDivOpening(line.text)
             : null;
         if (opening) {
-            context.fencedDivTypeCounters = context.fencedDivTypeCounters || new Map();
-            const renderExtendedTitle = isFencedDivExtrasEnabled(context.settings);
-            const title = renderExtendedTitle ? getFencedDivTitle(opening) : '';
-            const metadata = renderExtendedTitle && (opening.id || title || opening.classes.length > 0)
-                ? createFencedDivReferenceMetadata(
-                    title,
-                    opening.classes,
-                    context.fencedDivTypeCounters
-                )
-                : undefined;
-            const reference = opening.id
-                ? context.fencedDivLabels?.get(opening.id)
-                : undefined;
             return this.processOpeningFence(line, context, {
                 label: opening.id,
                 classes: opening.classes,
                 openingLine: line.number,
-                displayName: renderExtendedTitle
-                    ? reference?.blockTitleText ?? metadata?.blockTitleText
-                    : undefined
+                inlineTitle: opening.keyValues.get('title') || opening.inlineTitle,
+                openingFence: opening.fence
             });
         }
 
-        if (isFencedDivClosing(line.text) && (context.fencedDivStack || []).length > 0) {
-            return this.processClosingFence(line, context);
+        const closingFence = isFencedDivClosing(line.text);
+        if (closingFence && (context.fencedDivStack || []).length > 0) {
+            const stack = context.fencedDivStack!;
+            const top = stack[stack.length - 1];
+            if (closingFence.length >= top.openingFence.length) {
+                return this.processClosingFence(line, context);
+            }
         }
 
         return this.processContentLine(line, context);
@@ -77,15 +63,38 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
         context: ProcessingContext,
         stackItem: FencedDivStackItem
     ): StructuralResult {
-        this.resetDefinitionState(context);
+        const displayName = getFencedDivDisplayName(stackItem.classes);
+        let finalDisplayName = displayName;
+        
+        const pm = LongformProjectManager.getInstance();
+
+        if (stackItem.label) {
+            const globalRef = pm.getReference(stackItem.label);
+            if (globalRef && globalRef.displayTitle) {
+                finalDisplayName = globalRef.displayTitle;
+            }
+        } else if (context.filePath) {
+            // Find it by line number
+            const entries = pm.getFileEntries(context.filePath);
+            const entry = entries.find(e => e.lineNumber === stackItem.openingLine - 1);
+            if (entry && entry.displayTitle) {
+                finalDisplayName = entry.displayTitle;
+            }
+        }
+
+        const activeItem = {
+            ...stackItem,
+            displayName: finalDisplayName
+        };
+
         context.fencedDivStack = context.fencedDivStack || [];
-        context.fencedDivStack.push(stackItem);
+        context.fencedDivStack.push(activeItem);
         context.fencedDivBoundaryLine = line.number;
 
         const renderDepth = context.fencedDivStack.length;
         const decorations = [
             this.createFenceLineDecoration(line, 'cm-pem-fenced-div-open', stackItem.classes, renderDepth),
-            this.createOpeningMarkerDecoration(line, context, stackItem.label, stackItem.displayName || '')
+            this.createOpeningMarkerDecoration(line, context, finalDisplayName, stackItem.label, stackItem.inlineTitle)
         ];
 
         return {
@@ -95,7 +104,6 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
     }
 
     private processClosingFence(line: Line, context: ProcessingContext): StructuralResult {
-        this.resetDefinitionState(context);
         const stack = context.fencedDivStack || [];
         const renderDepth = stack.length;
         const closingItem = stack.pop();
@@ -130,8 +138,9 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
     private createOpeningMarkerDecoration(
         line: Line,
         context: ProcessingContext,
-        label: string | undefined,
-        titleText: string
+        displayName: string,
+        label?: string,
+        inlineTitle?: string
     ): { from: number; to: number; decoration: Decoration } {
         if (this.isCursorOnFenceLine(line, context)) {
             return {
@@ -147,12 +156,7 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
             from: line.from,
             to: line.to,
             decoration: Decoration.replace({
-                widget: new FencedDivHeaderWidget(
-                    label,
-                    titleText,
-                    context.view,
-                    line.from
-                ),
+                widget: new FencedDivHeaderWidget(displayName, label, inlineTitle, context.view, line.from, context.app, context.component),
                 inclusive: false
             })
         };
@@ -188,15 +192,15 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
         classes: string[],
         renderDepth: number
     ): { from: number; to: number; decoration: Decoration } {
-        const semanticClasses = getFencedDivCssClasses(classes)
-            .map(className => `cm-pem-fenced-div-${className}`);
+        const primaryClass = getFencedDivCssClass(classes);
         const depthClass = Math.min(renderDepth, this.maxDepthClass);
         const className = [
             CSS_CLASSES.FENCED_DIV_LINE,
             stateClass,
             renderDepth > 1 ? 'cm-pem-fenced-div-inner' : undefined,
             renderDepth > 1 ? `cm-pem-fenced-div-depth-${depthClass}` : undefined,
-            ...semanticClasses
+            primaryClass ? `cm-pem-fenced-div-${primaryClass}` : undefined,
+            primaryClass || undefined
         ].filter(Boolean).join(' ');
 
         return {
@@ -225,11 +229,14 @@ export class FencedDivProcessor extends BaseStructuralProcessor {
             return false;
         }
 
-        return isFencedDivClosing(context.document.line(line.number + 1).text);
-    }
+        const nextLineText = context.document.line(line.number + 1).text;
+        const closingFence = isFencedDivClosing(nextLineText);
+        if (!closingFence) return false;
 
-    private resetDefinitionState(context: ProcessingContext): void {
-        context.definitionState.lastWasItem = false;
-        context.definitionState.pendingBlankLine = false;
+        const stack = context.fencedDivStack || [];
+        if (stack.length === 0) return false;
+
+        const top = stack[stack.length - 1];
+        return closingFence.length >= top.openingFence.length;
     }
 }

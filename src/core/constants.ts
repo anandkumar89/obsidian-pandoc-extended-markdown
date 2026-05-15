@@ -3,8 +3,7 @@
  * Re-exports constants from split files and defines remaining constants
  */
 
-// Core list-related constants
-export { LIST_MARKERS, LIST_TYPES, INDENTATION } from './constants/listConstants';
+// Core list-related constants removed
 
 // CSS and styling constants
 export { CSS_CLASSES, COMPOSITE_CSS, DECORATION_STYLES } from './constants/cssConstants';
@@ -40,6 +39,7 @@ export const MESSAGES = {
     NO_DEFINITION_LISTS: 'No definition lists found',
     NO_FENCED_DIVS: 'No fenced divs found',
     NO_FOOTNOTES: 'No footnotes found',
+    NO_CITATIONS: 'No citations found',
     FOOTNOTE_REFERENCE_NOT_FOUND: 'No matching footnote reference found',
     LIST_PANEL_DISABLED: 'List panel is disabled in settings',
     CUSTOM_LABELS_VIEW_TITLE: 'Custom Labels',
@@ -47,6 +47,7 @@ export const MESSAGES = {
     DEFINITION_LISTS_VIEW_TITLE: 'Definition Lists',
     FENCED_DIVS_VIEW_TITLE: 'Fenced Divs',
     FOOTNOTE_VIEW_TITLE: 'Footnotes',
+    CITATIONS_VIEW_TITLE: 'Citations',
 
     // Formatting issue messages
     FORMATTING_ISSUES: (count: number) => `Found ${count} formatting issues`,
@@ -59,6 +60,7 @@ export const COMMANDS = {
     TOGGLE_DEFINITION_BOLD: 'toggle-definition-bold-style',
     TOGGLE_DEFINITION_UNDERLINE: 'toggle-definition-underline-style',
     OPEN_LIST_PANEL: 'open-list-panel',
+    EXPORT_PANDOC: 'export-to-pandoc',
 } as const;
 
 // Settings keys
@@ -70,10 +72,10 @@ export const SETTINGS = {
     EXAMPLE_LISTS: 'enableExampleLists',
     DEFINITION_LISTS: 'enableDefinitionLists',
     FENCED_DIVS: 'enableFencedDivs',
-    FENCED_DIV_EXTRAS: 'enableFencedDivExtras',
     SUPERSCRIPT: 'enableSuperscript',
     SUBSCRIPT: 'enableSubscript',
     CUSTOM_LABEL: 'enableCustomLabelLists',
+    CITATIONS: 'enableCitations',
     UNORDERED_LIST_MARKER_ORDER: 'unorderedListMarkerOrder',
     ORDERED_LIST_MARKER_CYCLING: 'enableOrderedListMarkerCycling',
     ORDERED_LIST_MARKER_ORDER: 'orderedListMarkerOrder',
@@ -87,77 +89,35 @@ export const SETTINGS_UI = {
         NAME: 'Syntax features',
         DESCRIPTION: 'Choose which Pandoc syntaxes the plugin should recognize and render.'
     },
-    LIST_AUTOCOMPLETION: {
-        NAME: 'List auto-completion',
-        DESCRIPTION: 'Configure automatic list editing behavior.'
+    FENCED_DIVS: {
+        NAME: 'Fenced Blocks',
+        DESCRIPTION: 'Enable Pandoc fenced div blocks such as ::: {.theorem} and @label references.'
+    },
+    HEADING_NUMBERING: {
+        NAME: 'Heading Numbering',
+        DESCRIPTION: 'Show computed heading numbers in Live Preview and Reading mode.'
+    },
+    CITATIONS: {
+        NAME: 'Citations',
+        DESCRIPTION: 'Enable Pandoc citation extraction and integration with ZotLit.'
     },
     PANEL_FEATURES: {
-        NAME: 'Panel features',
-        DESCRIPTION: 'Configure sidebar panel visibility and ordering.'
-    },
-    STRICT_MODE: {
-        NAME: 'Strict Pandoc mode',
-        DESCRIPTION: 'Validate Pandoc-compatible list formatting. When enabled, lists must have empty lines before and after them, and capital letter lists require double spacing after markers.'
-    },
-    AUTO_RENUMBER: {
-        NAME: 'Auto-renumber lists',
-        DESCRIPTION: 'Automatically renumber all list items when inserting a new item. This ensures proper sequential ordering of fancy lists (A, B, C... or i, ii, iii...) when you add items in the middle of a list.'
-    },
-    HASH_AUTO_NUMBER: {
-        NAME: 'Hash auto-number lists',
-        DESCRIPTION: 'Enable `#.` auto-numbering lists in live preview, reading mode, and list continuation logic.'
-    },
-    FANCY_LISTS: {
-        NAME: 'Fancy lists',
-        DESCRIPTION: 'Enable alphabetic and Roman numeral list markers such as `A.` and `iv.`.'
-    },
-    EXAMPLE_LISTS: {
-        NAME: 'Example lists',
-        DESCRIPTION: 'Enable Pandoc example lists using `(@label)` markers and example reference rendering.'
-    },
-    DEFINITION_LISTS: {
-        NAME: 'Definition lists',
-        DESCRIPTION: 'Enable Pandoc definition lists with term lines followed by `:` or `~` definitions.'
-    },
-    FENCED_DIVS: {
-        NAME: 'Fenced divs',
-        DESCRIPTION: 'Enable Pandoc fenced div blocks such as `::: {.theorem #thm:label}` in Live Preview and Reading mode.'
-    },
-    NON_NATIVE_SYNTAX: {
-        NAME: 'Non-native Pandoc syntax',
-        DESCRIPTION: 'Configure plugin extensions that require bundled filters or generated preview behavior.'
-    },
-    FENCED_DIV_EXTRAS: {
-        NAME: 'Fenced div titles and references',
-        DESCRIPTION: 'Generate fenced div titles, numbering, and `@id` reference rendering for fenced div blocks.'
-    },
-    SUPERSCRIPT: {
-        NAME: 'Superscript',
-        DESCRIPTION: 'Render inline superscript syntax like `2^10^`.'
-    },
-    SUBSCRIPT: {
-        NAME: 'Subscript',
-        DESCRIPTION: 'Render inline subscript syntax like `H~2~O`.'
-    },
-    CUSTOM_LABEL: {
-        NAME: 'Custom label lists',
-        DESCRIPTION: 'Enable `{::LABEL}` custom label lists and references. Use together with `CustomLabelList.lua` for Pandoc output.'
-    },
-    UNORDERED_LIST_MARKER_CYCLING: {
-        NAME: 'Cycle unordered list markers',
-        DESCRIPTION: 'When indenting or outdenting unordered list items, choose `-`, `+`, or `*` from the final nesting depth.'
-    },
-    UNORDERED_LIST_MARKER_STYLES: {
-        NAME: 'Distinct unordered list markers',
-        DESCRIPTION: 'Render `+` unordered list markers as squares and `*` markers as hollow circles in Live Preview and Reading mode.'
-    },
-    ORDERED_LIST_MARKER_CYCLING: {
-        NAME: 'Cycle ordered list markers',
-        DESCRIPTION: 'When indenting or outdenting ordered list items, choose the marker style from the final nesting depth.'
+        NAME: 'Sidebar Panel',
+        DESCRIPTION: 'Configure the academic sidebar panel behavior.'
     },
     LIST_PANEL: {
-        NAME: 'List panel',
-        DESCRIPTION: 'Enable the list panel view and its ribbon icon in the sidebar.'
+        NAME: 'Enable Sidebar',
+        DESCRIPTION: 'Show/hide the academic sidebar panel (TOC, Blocks, Equations, Figures).'
+    },
+    PANDOC_SETTINGS: {
+        NAME: 'Pandoc Export',
+        DESCRIPTION: 'Configure Pandoc export settings.',
+        PATH_NAME: 'Pandoc path',
+        PATH_DESC: 'The path to the pandoc executable.',
+        OUTPUT_NAME: 'Output directory',
+        OUTPUT_DESC: 'The directory where exported files will be saved.',
+        FORMAT_NAME: 'Default export format',
+        FORMAT_DESC: 'The default format to use when exporting.'
     }
 } as const;
 
@@ -303,69 +263,15 @@ export const ICONS = {
             :::
         </text>
     </svg>`,
-    LIST_PANEL_SVG: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
-        <g fill="currentColor" font-family="monospace" font-weight="bold">
-            <!-- 2x2 grid of Pandoc list markers for better visibility -->
-            <!-- Top left: Roman numeral -->
-            <text x="25" y="35" font-size="48" text-anchor="middle">i.</text>
-
-            <!-- Top right: Letter with parenthesis -->
-            <text x="75" y="35" font-size="48" text-anchor="middle">a)</text>
-
-            <!-- Bottom left: Hash number -->
-            <text x="25" y="75" font-size="48" text-anchor="middle">#.</text>
-
-            <!-- Bottom right: Definition marker -->
-            <text x="75" y="75" font-size="48" text-anchor="middle">~</text>
-        </g>
-    </svg>`,
+    LIST_PANEL_ID: 'layout',
     CUSTOM_LABEL_ID: 'custom-label-list',
-    LIST_PANEL_ID: 'list-panel-view'
+    LIST_PANEL_SVG: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6.5 2v20"/></svg>`,
+    LIST_PANEL_ID_OLD: 'list-panel-view',
+    EXPORT_ID: 'export-view',
+    EXPORT_SVG: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+    CITATION_SVG: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`
 } as const;
 
-// Panel settings configuration
-export const PANEL_SETTINGS = {
-    AVAILABLE_PANELS: [
-        {
-            id: 'custom-labels',
-            displayName: 'Custom Label List Panel',
-            icon: ICONS.CUSTOM_LABEL_SVG
-        },
-        {
-            id: 'example-lists',
-            displayName: 'Example List Panel',
-            icon: ICONS.EXAMPLE_LIST_SVG
-        },
-        {
-            id: 'definition-lists',
-            displayName: 'Definition Lists',
-            icon: ICONS.DEFINITION_LIST_SVG
-        },
-        {
-            id: 'fenced-divs',
-            displayName: 'Fenced Divs',
-            icon: ICONS.FENCED_DIV_SVG
-        },
-        {
-            id: 'footnotes',
-            displayName: 'Footnotes',
-            icon: ICONS.FOOTNOTE_SVG
-        }
-    ],
-    UI_TEXT: {
-        PANEL_ORDER_HEADING: 'Panel Order',
-        PANEL_ORDER_DESC: 'Select a panel and use the buttons to change its order in the sidebar',
-        UNORDERED_LIST_ORDER_HEADING: 'Unordered list marker order',
-        UNORDERED_LIST_ORDER_DESC: 'Select an unordered list marker and use the buttons to change its nesting-depth order',
-        ORDERED_LIST_ORDER_HEADING: 'Ordered list marker order',
-        ORDERED_LIST_ORDER_DESC: 'Select an ordered list marker style and use the buttons to change its nesting-depth order',
-        BTN_MOVE_UP: 'Move up',
-        BTN_MOVE_DOWN: 'Move down',
-        BTN_MOVE_TOP: 'Move to top',
-        BTN_MOVE_BOTTOM: 'Move to bottom',
-        BTN_RESTORE_DEFAULT: 'Restore to Default'
-    }
-} as const;
 
 // Error codes
 export const ERROR_CODES = {
@@ -379,7 +285,7 @@ export const ERROR_CODES = {
 
 // Error messages
 export const ERROR_MESSAGES = {
-    PLUGIN_PREFIX: 'Pandoc Extended Markdown',
+    PLUGIN_PREFIX: 'Academic Pandoc Markdown',
     UNEXPECTED_ERROR: 'An unexpected error occurred',
     PARSE_FAILED: 'failed',
     COPY_FAILED: 'Failed to copy label',

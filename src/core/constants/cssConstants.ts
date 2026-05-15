@@ -15,15 +15,12 @@ export const CSS_CLASSES = {
     DEFINITION_LIST: 'pem-definition-list',
     DEFINITION_TERM: 'pem-definition-term',
     DEFINITION_DESC: 'pem-list-definition-desc',
-    DEFINITION_DESC_LIST: 'pem-definition-desc-list',
-    DEFINITION_DESC_ITEM: 'pem-definition-desc-item',
     DEFINITION_ITEMS: 'pem-definition-items',
     DEFINITION_CONTENT_TEXT: 'pem-definition-content-text',
 
     // Fenced Div Classes
     FENCED_DIV_LINE: 'cm-pem-fenced-div-line',
     FENCED_DIV_HEADER: 'pem-fenced-div-header',
-    FENCED_DIV_TITLE: 'pem-fenced-div-title',
     FENCED_DIV_CLOSING: 'pem-fenced-div-closing',
     FENCED_DIV_REFERENCE: 'pem-fenced-div-reference',
     FENCED_DIV_PANEL_CONTAINER: 'pem-fenced-div-panel-container',
@@ -32,6 +29,7 @@ export const CSS_CLASSES = {
     FENCED_DIV_PANEL_LABEL: 'pem-fenced-div-panel-label',
     FENCED_DIV_PANEL_CONTENT: 'pem-fenced-div-panel-content',
     FENCED_DIV_PANEL_EMPTY: 'pem-fenced-div-panel-empty',
+    REFERENCE_INVALID: 'pem-reference-invalid',
 
     // Example List Classes
     EXAMPLE_REF: 'pem-example-reference',

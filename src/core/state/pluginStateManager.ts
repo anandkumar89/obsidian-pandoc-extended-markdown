@@ -8,7 +8,9 @@
  */
 
 // External libraries
-import { WorkspaceLeaf, MarkdownView } from 'obsidian';
+import { MarkdownView, TFile, WorkspaceLeaf } from 'obsidian';
+import { FencedDivReference } from '../../shared/types/fencedDivTypes';
+import { EquationPanelItem } from '../../shared/extractors/equationExtractor';
 
 // Types
 import { ViewMode, DocumentCounters, ViewState, ModeChangeEvent } from '../../shared/types/settingsTypes';
@@ -16,8 +18,7 @@ import { ViewMode, DocumentCounters, ViewState, ModeChangeEvent } from '../../sh
 // Constants
 import { UI_CONSTANTS } from '../constants';
 
-// Utils
-import { PlaceholderContext } from '../../shared/utils/placeholderProcessor';
+// Utils removed
 
 type ModeChangeCallback = (event: ModeChangeEvent) => void;
 
@@ -66,11 +67,6 @@ export class PluginStateManager {
     resetDocumentCounters(docPath: string): void {
         if (this.documentCounters.has(docPath)) {
             const counters = this.documentCounters.get(docPath)!;
-            counters.exampleCounter = 0;
-            counters.exampleMap.clear();
-            counters.exampleContent.clear();
-            counters.hashCounter = 0;
-            counters.placeholderContext.reset();
             counters.fencedDivLabels.clear();
         }
         // Mark that this document needs reprocessing
@@ -138,18 +134,13 @@ export class PluginStateManager {
         // Don't reset placeholder context on mode transitions
         // Let the scanner handle resets based on actual content changes
         
-        // Reset OTHER counters (not placeholder) when exiting reading mode
+        // Reset OTHER counters when exiting reading mode
         if (event.previousMode === "reading" && event.currentMode !== "reading") {
             if (event.previousPath) {
                 // Only reset non-placeholder counters
                 if (this.documentCounters.has(event.previousPath)) {
                     const counters = this.documentCounters.get(event.previousPath)!;
-                    counters.exampleCounter = 0;
-                    counters.exampleMap.clear();
-                    counters.exampleContent.clear();
-                    counters.hashCounter = 0;
                     counters.fencedDivLabels.clear();
-                    // DON'T reset placeholderContext
                 }
                 // Mark that this document needs reprocessing
                 this.documentsNeedingReprocess.add(event.previousPath);
@@ -191,50 +182,7 @@ export class PluginStateManager {
         this.modeChangeListeners.forEach(callback => callback(event));
     }
 
-    /**
-     * Increment example counter for a document
-     */
-    incrementExampleCounter(docPath: string): number {
-        const counters = this.getDocumentCounters(docPath);
-        counters.exampleCounter++;
-        return counters.exampleCounter;
-    }
 
-    /**
-     * Increment hash counter for a document
-     */
-    incrementHashCounter(docPath: string): number {
-        const counters = this.getDocumentCounters(docPath);
-        counters.hashCounter++;
-        return counters.hashCounter;
-    }
-
-    /**
-     * Store labeled example data
-     */
-    setLabeledExample(docPath: string, label: string, number: number, content?: string): void {
-        const counters = this.getDocumentCounters(docPath);
-        counters.exampleMap.set(label, number);
-        if (content) {
-            counters.exampleContent.set(label, content);
-        }
-    }
-
-    /**
-     * Get labeled example number
-     */
-    getLabeledExampleNumber(docPath: string, label: string): number | undefined {
-        const counters = this.getDocumentCounters(docPath);
-        return counters.exampleMap.get(label);
-    }
-
-    /**
-     * Get labeled example content
-     */
-    getLabeledExampleContent(docPath: string, label: string): string | undefined {
-        const counters = this.getDocumentCounters(docPath);
-        return counters.exampleContent.get(label);
-    }
 
     /**
      * Mark an element as processed to prevent duplicate processing
@@ -292,21 +240,7 @@ export class PluginStateManager {
         return anyChanges;
     }
 
-    /**
-     * Get placeholder context for a document (for testing compatibility)
-     */
-    getPlaceholderContext(docPath: string): PlaceholderContext {
-        return this.getDocumentCounters(docPath).placeholderContext;
-    }
 
-    /**
-     * Set custom labels for a document (for testing compatibility)
-     */
-    setCustomLabels(docPath: string, customLabels: Map<string, string>, rawToProcessed: Map<string, string>): void {
-        const counters = this.getDocumentCounters(docPath);
-        counters.customLabels = customLabels;
-        counters.rawToProcessed = rawToProcessed;
-    }
 
     /**
      * Clear all states (for plugin unload)
@@ -322,14 +256,8 @@ export class PluginStateManager {
      */
     private createEmptyCounters(): DocumentCounters {
         return {
-            exampleCounter: 0,
-            exampleMap: new Map(),
-            exampleContent: new Map(),
-            hashCounter: 0,
-            placeholderContext: new PlaceholderContext(),
-            customLabels: new Map(),
-            rawToProcessed: new Map(),
-            fencedDivLabels: new Map()
+            fencedDivLabels: new Map(),
+            equationLabels: new Map()
         };
     }
 

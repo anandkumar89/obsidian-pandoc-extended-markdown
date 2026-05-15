@@ -1,23 +1,8 @@
 import { browser, expect } from '@wdio/globals';
 
 interface ReadingModeFencedDivState {
-    strictPandocMode: boolean | null;
     blockCount: number;
-    fencedDivInlineMathCount: number;
-    fencedDivBlockMathCount: number;
-    fencedDivLoadedMathCount: number;
-    fencedDivMathHtml: string[];
-    nestedInlineMathCount: number;
-    nestedBlockMathCount: number;
-    nestedLoadedMathCount: number;
-    nestedMathDirectText: string;
-    nestedTextOutsideMath: string;
-    blockWidths: number[];
-    blockParentClasses: string[];
-    blockParentIndices: number[];
-    previewWidth: number;
     headerTexts: string[];
-    titleElementCount: number;
     blockLabels: string[];
     blockClasses: string[];
     blockTexts: string[];
@@ -25,14 +10,6 @@ interface ReadingModeFencedDivState {
     referenceLabels: string[];
     rawText: string;
     paragraphHtml: string[];
-}
-
-interface ReadingModeDefinitionMarkerBoundaryState {
-    blockCount: number;
-    blockTexts: string[];
-    definitionListCount: number;
-    rawText: string;
-    previewHtml: string;
 }
 
 describe('Fenced div reading mode', () => {
@@ -52,9 +29,7 @@ describe('Fenced div reading mode', () => {
             // @ts-ignore
             const enabledPlugin = app.plugins.plugins['pandoc-extended-markdown'];
             if (enabledPlugin?.settings) {
-                enabledPlugin.settings.strictPandocMode = false;
                 enabledPlugin.settings.enableFencedDivs = true;
-                enabledPlugin.settings.enableFencedDivExtras = true;
                 await enabledPlugin.saveSettings();
                 // @ts-ignore
                 app.workspace.updateOptions();
@@ -62,10 +37,10 @@ describe('Fenced div reading mode', () => {
         });
     });
 
-    it('renders Pandoc fenced div blocks and @id citations in reading mode', async () => {
+    it('renders Pandoc fenced div blocks and @id references in reading mode', async () => {
         const filePath = 'fenced-div-reading-mode-e2e.md';
         const content = [
-            '::: {.theorem #thm:reading title="Theorem &"}',
+            '::: {.theorem #thm:reading}',
             'Every compact metric space is complete.',
             ':::',
             '',
@@ -80,8 +55,8 @@ describe('Fenced div reading mode', () => {
             await browser.waitUntil(async () => {
                 const state = await getReadingModeFencedDivState();
                 return state.blockCount === 1 &&
-                    state.headerTexts.includes('Theorem 1') &&
-                    state.referenceTexts.includes('Theorem 1');
+                    state.headerTexts.includes('Theorem:') &&
+                    state.referenceTexts.includes('Theorem');
             }, {
                 timeout: 5000,
                 timeoutMsg: 'Expected fenced div block and reference in reading mode'
@@ -94,52 +69,14 @@ describe('Fenced div reading mode', () => {
         const state = await getReadingModeFencedDivState();
 
         expect(state.blockCount).toBe(1);
-        expect(state.headerTexts).toEqual(['Theorem 1']);
+        expect(state.headerTexts).toEqual(['Theorem:']);
         expect(state.blockLabels).toEqual(['thm:reading']);
         expect(state.blockClasses[0]).toContain('pem-fenced-div-theorem');
         expect(state.blockTexts[0]).toContain('Every compact metric space is complete.');
-        expect(state.referenceTexts).toEqual(['Theorem 1']);
+        expect(state.referenceTexts).toEqual(['Theorem']);
         expect(state.referenceLabels).toEqual(['thm:reading']);
-        expect(state.rawText).not.toContain('::: {.theorem #thm:reading title="Theorem &"}');
+        expect(state.rawText).not.toContain('::: {.theorem #thm:reading}');
         expect(state.rawText).not.toContain('@thm:reading');
-
-        await deleteFileIfExists(filePath);
-    });
-
-    it('keeps marker-only fenced div content as plain text in reading mode', async () => {
-        const filePath = 'fenced-div-definition-marker-reading-mode.md';
-        const content = [
-            '::: title',
-            ': text',
-            ':::'
-        ].join('\n');
-
-        await createOrReplaceFile(filePath, content);
-        await openFileInActiveLeaf(filePath);
-        await ensureReadingMode();
-
-        try {
-            await browser.waitUntil(async () => {
-                const state = await getReadingModeDefinitionMarkerBoundaryState();
-                return state.blockCount === 1 &&
-                    state.blockTexts.some(text => text.includes(': text')) &&
-                    !state.rawText.includes('::: title');
-            }, {
-                timeout: 5000,
-                timeoutMsg: 'Expected marker-only fenced div content as plain text in reading mode'
-            });
-        } catch (error) {
-            const state = await getReadingModeDefinitionMarkerBoundaryState();
-            throw new Error(`${(error as Error).message}\nState: ${JSON.stringify(state, null, 2)}`);
-        }
-
-        const state = await getReadingModeDefinitionMarkerBoundaryState();
-
-        expect(state.blockCount).toBe(1);
-        expect(state.blockTexts[0]).toContain(': text');
-        expect(state.definitionListCount).toBe(0);
-        expect(state.rawText).not.toContain('::: title');
-        expect(state.rawText).not.toContain(':::');
 
         await deleteFileIfExists(filePath);
     });
@@ -164,25 +101,20 @@ describe('Fenced div reading mode', () => {
         await openFileInActiveLeaf(filePath);
         await ensureReadingMode();
 
-        try {
-            await browser.waitUntil(async () => {
-                const state = await getReadingModeFencedDivState();
-                return state.blockCount === 3 &&
-                    state.headerTexts.join('|') === 'Outer|Inner|Warning' &&
-                    state.referenceTexts.join('|') === 'Outer|Inner|Warning';
-            }, {
-                timeout: 5000,
-                timeoutMsg: 'Expected adjacent and nested fenced divs in reading mode'
-            });
-        } catch (error) {
+        await browser.waitUntil(async () => {
             const state = await getReadingModeFencedDivState();
-            throw new Error(`${(error as Error).message}\nState: ${JSON.stringify(state, null, 2)}`);
-        }
+            return state.blockCount === 3 &&
+                state.headerTexts.join('|') === 'Outer:|Inner:|Warning:' &&
+                state.referenceTexts.join('|') === 'Outer|Inner|Warning';
+        }, {
+            timeout: 5000,
+            timeoutMsg: 'Expected adjacent and nested fenced divs in reading mode'
+        });
 
         const state = await getReadingModeFencedDivState();
 
         expect(state.blockCount).toBe(3);
-        expect(state.headerTexts).toEqual(['Outer', 'Inner', 'Warning']);
+        expect(state.headerTexts).toEqual(['Outer:', 'Inner:', 'Warning:']);
         expect(state.blockLabels).toEqual(['outer', 'inner', 'warn']);
         expect(state.blockClasses[1]).toContain('pem-fenced-div-inner');
         expect(state.blockClasses[2]).toContain('pem-fenced-div-inner');
@@ -197,145 +129,6 @@ describe('Fenced div reading mode', () => {
         expect(state.rawText).not.toContain('@warn');
 
         await deleteFileIfExists(filePath);
-    });
-
-    it('matches Pandoc when an Obsidian comment contains a fenced-div closing marker', async () => {
-        const filePath = 'fenced-div-reading-mode-comment-close-e2e.md';
-        const content = [
-            '::: Title',
-            'inside-title',
-            '%%',
-            ':::',
-            '%%',
-            'outside-title',
-            ':::',
-            '',
-            'tail-text'
-        ].join('\n');
-
-        await createOrReplaceFile(filePath, content);
-        await openFileInActiveLeaf(filePath);
-        await ensureReadingMode();
-
-        try {
-            await browser.waitUntil(async () => {
-                const state = await getReadingModeFencedDivState();
-                return state.blockCount === 1 &&
-                    state.headerTexts[0] === 'Title' &&
-                    state.rawText.includes('outside-title') &&
-                    state.rawText.includes('tail-text');
-            }, {
-                timeout: 5000,
-                timeoutMsg: 'Expected comment-delimited fenced div sample in reading mode'
-            });
-        } catch (error) {
-            const state = await getReadingModeFencedDivState();
-            throw new Error(`${(error as Error).message}\nState: ${JSON.stringify(state, null, 2)}`);
-        }
-
-        const state = await getReadingModeFencedDivState();
-
-        expect(state.blockCount).toBe(1);
-        expect(state.headerTexts).toEqual(['Title']);
-        expect(state.blockTexts[0]).toContain('inside-title');
-        expect(state.blockTexts[0]).not.toContain('outside-title');
-        expect(state.rawText).toContain('outside-title');
-        expect(state.rawText).toContain('tail-text');
-        expect(state.rawText).toContain(':::');
-
-        await deleteFileIfExists(filePath);
-    });
-
-    it('renders fenced div titles and @id references in strict Pandoc mode when extras are enabled', async () => {
-        const filePath = 'fenced-div-reading-mode-strict-e2e.md';
-        const content = [
-            '::: {.theorem #thm:strict title="Theorem &"}',
-            'Strict-mode content.',
-            ':::',
-            '',
-            'See @thm:strict for the result.'
-        ].join('\n');
-
-        await setStrictPandocMode(true);
-        try {
-            await createOrReplaceFile(filePath, content);
-            await openFileInActiveLeaf(filePath);
-            await ensureReadingMode();
-
-            try {
-                await browser.waitUntil(async () => {
-                    const state = await getReadingModeFencedDivState();
-                    return state.strictPandocMode === true &&
-                        state.blockCount === 1 &&
-                        state.titleElementCount === 1 &&
-                        state.referenceTexts.includes('Theorem 1') &&
-                        !state.rawText.includes('@thm:strict');
-                }, {
-                    timeout: 5000,
-                    timeoutMsg: 'Expected strict Pandoc reading mode to render fenced-div citation text'
-                });
-            } catch (error) {
-                const state = await getReadingModeFencedDivState();
-                throw new Error(`${(error as Error).message}\nState: ${JSON.stringify(state, null, 2)}`);
-            }
-
-            const state = await getReadingModeFencedDivState();
-
-            expect(state.blockCount).toBe(1);
-            expect(state.headerTexts).toEqual(['Theorem 1']);
-            expect(state.titleElementCount).toBe(1);
-            expect(state.blockLabels).toEqual(['thm:strict']);
-            expect(state.blockClasses[0]).toContain('pem-fenced-div-theorem');
-            expect(state.blockTexts[0]).toContain('Strict-mode content.');
-            expect(state.referenceTexts).toEqual(['Theorem 1']);
-            expect(state.referenceLabels).toEqual(['thm:strict']);
-            expect(state.rawText).not.toContain('@thm:strict');
-            expect(state.rawText).not.toContain('::: {.theorem #thm:strict title="Theorem &"}');
-        } finally {
-            await setStrictPandocMode(false);
-            await deleteFileIfExists(filePath);
-        }
-    });
-
-    it('keeps base fenced div blocks but preserves @id references when fenced div extras are disabled', async () => {
-        const filePath = 'fenced-div-reading-mode-extras-off-e2e.md';
-        const content = [
-            '::: {.theorem #thm:extras title="Theorem &"}',
-            'Extras-disabled content.',
-            ':::',
-            '',
-            'See @thm:extras for the result.'
-        ].join('\n');
-
-        await setFencedDivExtras(false);
-        try {
-            await createOrReplaceFile(filePath, content);
-            await openFileInActiveLeaf(filePath);
-            await ensureReadingMode();
-
-            await browser.waitUntil(async () => {
-                const state = await getReadingModeFencedDivState();
-                return state.blockCount === 1 &&
-                    state.titleElementCount === 0 &&
-                    state.referenceTexts.length === 0 &&
-                    state.rawText.includes('@thm:extras');
-            }, {
-                timeout: 5000,
-                timeoutMsg: 'Expected fenced div block without generated extras in reading mode'
-            });
-
-            const state = await getReadingModeFencedDivState();
-
-            expect(state.blockCount).toBe(1);
-            expect(state.headerTexts).toEqual(['']);
-            expect(state.blockLabels).toEqual(['thm:extras']);
-            expect(state.referenceTexts).toEqual([]);
-            expect(state.rawText).toContain('@thm:extras');
-            expect(state.rawText).not.toContain('::: {.theorem #thm:extras title="Theorem &"}');
-        } finally {
-            await setFencedDivExtras(true);
-            await deleteFileIfExists(filePath);
-        }
     });
 
     it('keeps nested fenced divs open across blank-line reading-mode paragraphs', async () => {
@@ -364,7 +157,7 @@ describe('Fenced div reading mode', () => {
             await browser.waitUntil(async () => {
                 const state = await getReadingModeFencedDivState();
                 return state.blockCount === 3 &&
-                    state.headerTexts.join('|') === 'Warning|Danger|Warning2' &&
+                    state.headerTexts.join('|') === 'Warning:|Danger:|Warning2:' &&
                     !state.rawText.includes(':::');
             }, {
                 timeout: 5000,
@@ -378,7 +171,7 @@ describe('Fenced div reading mode', () => {
         const state = await getReadingModeFencedDivState();
 
         expect(state.blockCount).toBe(3);
-        expect(state.headerTexts).toEqual(['Warning', 'Danger', 'Warning2']);
+        expect(state.headerTexts).toEqual(['Warning:', 'Danger:', 'Warning2:']);
         expect(state.blockTexts[0]).toContain('This is a warning.');
         expect(state.blockTexts[0]).toContain('This is on the 1st level');
         expect(state.blockTexts[1]).toContain('This is a warning within a warning.');
@@ -388,184 +181,17 @@ describe('Fenced div reading mode', () => {
 
         await deleteFileIfExists(filePath);
     });
-
-    it('preserves rendered math inside nested fenced divs in reading mode', async () => {
-        const filePath = 'fenced-div-reading-mode-math-e2e.md';
-        const content = [
-            '::: title',
-            '',
-            'Plain content and $\\tt{inline math}$',
-            '$$\\tt{math block}$$',
-            'Plain content and $\\tt{inline math}$',
-            '',
-            '::: nested',
-            '',
-            'Plain content and $\\tt{inline math}$',
-            '$$\\tt{block}$$',
-            'Plain content and $\\tt{inline math}$',
-            ':::',
-            ':::',
-            '',
-            '::: normal',
-            'Normal',
-            ':::'
-        ].join('\n');
-
-        await createOrReplaceFile(filePath, content);
-        await openFileInActiveLeaf(filePath);
-        await ensureReadingMode();
-
-        try {
-            await browser.waitUntil(async () => {
-                const state = await getReadingModeFencedDivState();
-                return state.blockCount === 3 &&
-                    state.fencedDivInlineMathCount === 4 &&
-                    state.fencedDivBlockMathCount === 2 &&
-                    state.fencedDivLoadedMathCount === 6 &&
-                    state.nestedInlineMathCount === 2 &&
-                    state.nestedBlockMathCount === 1 &&
-                    state.nestedLoadedMathCount === 3 &&
-                    !state.rawText.includes(':::');
-            }, {
-                timeout: 5000,
-                timeoutMsg: 'Expected rendered inline and block math inside reading-mode fenced divs'
-            });
-        } catch (error) {
-            const state = await getReadingModeFencedDivState();
-            throw new Error(`${(error as Error).message}\nState: ${JSON.stringify(state, null, 2)}`);
-        }
-
-        const state = await getReadingModeFencedDivState();
-        const outerWidth = state.blockWidths[0];
-        const normalWidth = state.blockWidths[2];
-
-        expect(state.blockCount).toBe(3);
-        expect(state.headerTexts).toEqual(['Title', 'Nested', 'Normal']);
-        expect(state.fencedDivInlineMathCount).toBe(4);
-        expect(state.fencedDivBlockMathCount).toBe(2);
-        expect(state.fencedDivLoadedMathCount).toBe(6);
-        expect(state.nestedInlineMathCount).toBe(2);
-        expect(state.nestedBlockMathCount).toBe(1);
-        expect(state.nestedLoadedMathCount).toBe(3);
-        expect(state.nestedTextOutsideMath).not.toContain('\\tt{inline math}');
-        expect(state.nestedTextOutsideMath).not.toContain('\\tt{block}');
-        expect(state.nestedTextOutsideMath).not.toContain('tt{inline math}');
-        expect(state.nestedTextOutsideMath).not.toContain('tt{block}');
-        expect(state.nestedMathDirectText).not.toContain('\\tt{inline math}');
-        expect(state.nestedMathDirectText).not.toContain('\\tt{block}');
-        expect(state.nestedMathDirectText).not.toContain('tt{inline math}');
-        expect(state.nestedMathDirectText).not.toContain('tt{block}');
-        if (outerWidth < normalWidth * 0.95) {
-            throw new Error(`Expected multiline fenced div width to match normal fenced div width\nState: ${JSON.stringify(state, null, 2)}`);
-        }
-        expect(state.blockTexts[0]).toContain('Plain content and');
-        expect(state.rawText).not.toContain(':::');
-
-        await deleteFileIfExists(filePath);
-    });
-
-    it('preserves deeply nested fenced div structure around rendered math in reading mode', async () => {
-        const filePath = 'fenced-div-reading-mode-deep-math-e2e.md';
-        const content = [
-            '::: title',
-            '',
-            'Plain content and $\\tt{inline math}$',
-            '$$\\tt{math block}$$',
-            'Plain content and $\\tt{inline math}$',
-            '',
-            '::: nested',
-            '',
-            'Plain content and $\\tt{inline math}$',
-            '$$\\tt{block}$$',
-            'Plain content and $\\tt{inline math}$',
-            '',
-            '::: Nested Again {}',
-            'Plain content and $\\tt{inline math}$',
-            '$$\\tt{block}$$',
-            'Plain content and $\\tt{inline math}$',
-            '',
-            '::: Nested Yet Again {}',
-            'Plain content and $\\tt{inline math}$',
-            '$$\\tt{block}$$',
-            'Plain content and $\\tt{inline math}$',
-            ':::',
-            ':::',
-            ':::',
-            ':::'
-        ].join('\n');
-
-        await createOrReplaceFile(filePath, content);
-        await openFileInActiveLeaf(filePath);
-        await ensureReadingMode();
-
-        try {
-            await browser.waitUntil(async () => {
-                const state = await getReadingModeFencedDivState();
-                return state.blockCount === 4 &&
-                    state.headerTexts.join('|') === 'Title|Nested|Nested Again|Nested Yet Again' &&
-                    state.fencedDivInlineMathCount === 8 &&
-                    state.fencedDivBlockMathCount === 4 &&
-                    !state.rawText.includes(':::');
-            }, {
-                timeout: 5000,
-                timeoutMsg: 'Expected deeply nested reading-mode fenced divs around rendered math'
-            });
-        } catch (error) {
-            const state = await getReadingModeFencedDivState();
-            throw new Error(`${(error as Error).message}\nState: ${JSON.stringify(state, null, 2)}`);
-        }
-
-        const state = await getReadingModeFencedDivState();
-
-        expect(state.blockCount).toBe(4);
-        expect(state.headerTexts).toEqual(['Title', 'Nested', 'Nested Again', 'Nested Yet Again']);
-        expect(state.blockClasses.slice(1).every(className =>
-            className.includes('pem-fenced-div-inner')
-        )).toBe(true);
-        expect(state.blockParentIndices).toEqual([-1, 0, 1, 2]);
-        expect(state.fencedDivInlineMathCount).toBe(8);
-        expect(state.fencedDivBlockMathCount).toBe(4);
-        expect(state.fencedDivLoadedMathCount).toBe(12);
-        expect(state.nestedTextOutsideMath).not.toContain('\\tt{inline math}');
-        expect(state.nestedTextOutsideMath).not.toContain('\\tt{block}');
-        expect(state.rawText).not.toContain(':::');
-
-        await deleteFileIfExists(filePath);
-    });
 });
 
 async function getReadingModeFencedDivState(): Promise<ReadingModeFencedDivState> {
     return browser.execute((): ReadingModeFencedDivState => {
-        // @ts-ignore
-        const plugin = app.plugins.plugins['pandoc-extended-markdown'];
         const preview = document.querySelector('.markdown-preview-view') as HTMLElement | null;
         const blocks = Array.from(preview?.querySelectorAll('.pem-fenced-div') ?? []) as HTMLElement[];
         const references = Array.from(preview?.querySelectorAll('.pem-fenced-div-reference') ?? []) as HTMLElement[];
-        const fencedDivMath = Array.from(preview?.querySelectorAll('.pem-fenced-div .math') ?? []) as HTMLElement[];
-        const nestedBlock = preview?.querySelector('.pem-fenced-div-nested') as HTMLElement | null;
-        const previewRect = preview?.getBoundingClientRect();
 
         return {
-            strictPandocMode: plugin?.settings?.strictPandocMode ?? null,
             blockCount: blocks.length,
-            fencedDivInlineMathCount: preview?.querySelectorAll('.pem-fenced-div .math-inline').length ?? 0,
-            fencedDivBlockMathCount: preview?.querySelectorAll('.pem-fenced-div .math-block').length ?? 0,
-            fencedDivLoadedMathCount: preview?.querySelectorAll('.pem-fenced-div .math.is-loaded').length ?? 0,
-            fencedDivMathHtml: fencedDivMath.map(math => math.outerHTML),
-            nestedInlineMathCount: nestedBlock?.querySelectorAll('.math-inline').length ?? 0,
-            nestedBlockMathCount: nestedBlock?.querySelectorAll('.math-block').length ?? 0,
-            nestedLoadedMathCount: nestedBlock?.querySelectorAll('.math.is-loaded').length ?? 0,
-            nestedMathDirectText: getMathDirectText(nestedBlock),
-            nestedTextOutsideMath: getTextOutsideMath(nestedBlock),
-            blockWidths: blocks.map(block => block.getBoundingClientRect().width),
-            blockParentClasses: blocks.map(block => (block.parentElement as HTMLElement | null)?.className ?? ''),
-            blockParentIndices: blocks.map(block => {
-                const parentBlock = block.parentElement?.closest('.pem-fenced-div') as HTMLElement | null;
-                return parentBlock ? blocks.indexOf(parentBlock) : -1;
-            }),
-            previewWidth: previewRect?.width ?? 0,
             headerTexts: blocks.map(block => block.querySelector('.pem-fenced-div-title')?.textContent ?? ''),
-            titleElementCount: preview?.querySelectorAll('.pem-fenced-div > .pem-fenced-div-title').length ?? 0,
             blockLabels: blocks.map(block => block.dataset.pandocDivId ?? ''),
             blockClasses: blocks.map(block => block.className),
             blockTexts: blocks.map(block => block.textContent ?? ''),
@@ -574,37 +200,6 @@ async function getReadingModeFencedDivState(): Promise<ReadingModeFencedDivState
             rawText: preview?.textContent ?? '',
             paragraphHtml: Array.from(preview?.querySelectorAll('.el-p') ?? [])
                 .map(element => element.innerHTML)
-        };
-
-        function getTextOutsideMath(root: HTMLElement | null): string {
-            if (!root) return '';
-            const clone = root.cloneNode(true) as HTMLElement;
-            clone.querySelectorAll('.math, mjx-container').forEach(element => element.remove());
-            return clone.textContent ?? '';
-        }
-
-        function getMathDirectText(root: HTMLElement | null): string {
-            if (!root) return '';
-            return Array.from(root.querySelectorAll('.math'))
-                .flatMap(math => Array.from(math.childNodes))
-                .filter(node => node.nodeType === Node.TEXT_NODE)
-                .map(node => node.textContent ?? '')
-                .join(' ');
-        }
-    });
-}
-
-async function getReadingModeDefinitionMarkerBoundaryState(): Promise<ReadingModeDefinitionMarkerBoundaryState> {
-    return browser.execute((): ReadingModeDefinitionMarkerBoundaryState => {
-        const preview = document.querySelector('.markdown-preview-view') as HTMLElement | null;
-        const blocks = Array.from(preview?.querySelectorAll('.pem-fenced-div') ?? []) as HTMLElement[];
-
-        return {
-            blockCount: blocks.length,
-            blockTexts: blocks.map(block => block.textContent ?? ''),
-            definitionListCount: preview?.querySelectorAll('dl.pem-definition-list').length ?? 0,
-            rawText: preview?.textContent ?? '',
-            previewHtml: preview?.innerHTML ?? ''
         };
     });
 }
@@ -657,34 +252,6 @@ async function ensureReadingMode(): Promise<void> {
         timeoutMsg: 'Expected reading mode preview to be visible'
     });
     await browser.pause(500);
-}
-
-async function setStrictPandocMode(value: boolean): Promise<void> {
-    await browser.execute(async (strictPandocMode: boolean) => {
-        // @ts-ignore
-        const plugin = app.plugins.plugins['pandoc-extended-markdown'];
-        if (plugin?.settings) {
-            plugin.settings.strictPandocMode = strictPandocMode;
-            await plugin.saveSettings();
-            // @ts-ignore
-            app.workspace.updateOptions();
-        }
-    }, value);
-    await browser.pause(250);
-}
-
-async function setFencedDivExtras(value: boolean): Promise<void> {
-    await browser.execute(async (enableFencedDivExtras: boolean) => {
-        // @ts-ignore
-        const plugin = app.plugins.plugins['pandoc-extended-markdown'];
-        if (plugin?.settings) {
-            plugin.settings.enableFencedDivExtras = enableFencedDivExtras;
-            await plugin.saveSettings();
-            // @ts-ignore
-            app.workspace.updateOptions();
-        }
-    }, value);
-    await browser.pause(250);
 }
 
 async function deleteFileIfExists(path: string): Promise<void> {

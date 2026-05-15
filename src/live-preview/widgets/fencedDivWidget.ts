@@ -5,26 +5,52 @@ import { BaseWidget } from './BaseWidget';
 
 export class FencedDivHeaderWidget extends BaseWidget {
     constructor(
+        public displayName: string,
         public label?: string,
-        public titleText: string = '',
+        public inlineTitle?: string,
         view?: EditorView,
-        pos?: number
+        pos?: number,
+        private app?: App,
+        private component?: Component
     ) {
         super(view, pos);
     }
 
     protected applyStyles(element: HTMLElement): void {
-        element.className = [
-            CSS_CLASSES.FENCED_DIV_HEADER,
-            this.titleText ? CSS_CLASSES.FENCED_DIV_TITLE : undefined
-        ].filter(Boolean).join(' ');
+        element.className = CSS_CLASSES.FENCED_DIV_HEADER;
         if (this.label) {
             element.dataset.pandocDivId = this.label;
         }
     }
 
     protected setContent(element: HTMLElement): void {
-        element.textContent = this.titleText;
+        const blockName = this.displayName ? this.displayName.toLowerCase() : 'fenced-div';
+        
+        const titleElement = this.createElement('span', `${blockName}-title`);
+        
+        // Render displayName as bold
+        const nameSpan = titleElement.createSpan();
+        nameSpan.innerHTML = `<strong>${this.displayName}</strong>`;
+        
+        // Render inline title if present, with math support
+        if (this.inlineTitle) {
+            titleElement.createSpan({ text: ' (' });
+            const titleSpan = titleElement.createSpan();
+            if (this.app && this.component && this.inlineTitle.includes('$')) {
+                const { MarkdownRenderer } = require('obsidian');
+                MarkdownRenderer.render(this.app, this.inlineTitle, titleSpan, '', this.component);
+                // Remove the wrapping <p> if present
+                const p = titleSpan.querySelector('p');
+                if (p) {
+                    titleSpan.innerHTML = p.innerHTML;
+                }
+            } else {
+                titleSpan.textContent = this.inlineTitle;
+            }
+            titleElement.createSpan({ text: ')' });
+        }
+        
+        element.appendChild(titleElement);
     }
 
     protected setupTooltip(element: HTMLElement): void {
@@ -34,8 +60,9 @@ export class FencedDivHeaderWidget extends BaseWidget {
     }
 
     eq(other: FencedDivHeaderWidget): boolean {
-        return other.label === this.label &&
-               other.titleText === this.titleText &&
+        return other.displayName === this.displayName &&
+               other.label === this.label &&
+               other.inlineTitle === this.inlineTitle &&
                other.pos === this.pos;
     }
 }
@@ -66,13 +93,17 @@ export class FencedDivReferenceWidget extends BaseWidget {
         view?: EditorView,
         pos?: number,
         private app?: App,
-        private component?: Component
+        private component?: Component,
+        public isValid: boolean = true
     ) {
         super(view, pos);
     }
 
     protected applyStyles(element: HTMLElement): void {
         element.className = CSS_CLASSES.FENCED_DIV_REFERENCE;
+        if (!this.isValid) {
+            element.classList.add(CSS_CLASSES.REFERENCE_INVALID);
+        }
         element.dataset.pandocDivRef = this.label;
     }
 
@@ -97,6 +128,42 @@ export class FencedDivReferenceWidget extends BaseWidget {
         } else {
             this.addSimpleTooltip(element, this.content);
         }
+    }
+
+    protected setupClickHandler(element: HTMLElement): void {
+        element.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (this.app) {
+                // Try to find the reference in the global project index
+                const { LongformProjectManager } = require('../../core/state/longformProjectManager');
+                const pm = LongformProjectManager.getInstance();
+                
+                let globalRef = pm.getReference(this.label);
+                if (!globalRef && this.label.startsWith('eq:')) {
+                    const tagLabel = this.label.substring(3);
+                    globalRef = pm.getEquationReference(tagLabel);
+                }
+                
+                if (globalRef && globalRef.filePath) {
+                    const targetFile = this.app.vault.getAbstractFileByPath(globalRef.filePath);
+                    if (targetFile) {
+                        const leaf = this.app.workspace.getLeaf(e.ctrlKey || e.metaKey);
+                        leaf.openFile(targetFile as any, { eState: { line: globalRef.lineNumber } });
+                        return;
+                    }
+                }
+            }
+
+            // Fallback: Just focus cursor if in editor
+            if (this.view && this.pos !== undefined) {
+                this.view.dispatch({
+                    selection: { anchor: this.pos }
+                });
+                this.view.focus();
+            }
+        });
     }
 
     eq(other: FencedDivReferenceWidget): boolean {

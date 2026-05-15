@@ -13,6 +13,11 @@ export interface PanelModule {
     onUpdate(activeView: MarkdownView | null): void;
     shouldUpdate(): boolean;
     destroy(): void;
+    setSearchQuery(query: string): void;
+    /** Optional: render module-specific action buttons into the top bar actions area */
+    renderActions?(actionsEl: HTMLElement, activeView: MarkdownView | null): void;
+    /** Optional: sync active heading from scroll position */
+    setActiveHeading?(filePath: string, lineNumber: number): void;
 }
 
 export interface PanelModuleConstructor {

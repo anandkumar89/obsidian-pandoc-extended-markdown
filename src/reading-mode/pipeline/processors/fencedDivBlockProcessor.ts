@@ -1,5 +1,4 @@
-import { scheduleFencedDivProcessing } from '../../features/fenced-divs/processor';
-import { readFullSourceText } from '../sourceText';
+import { scheduleFencedDivProcessing } from '../../parsers/fencedDivParser';
 import { BlockDomProcessor, ReadingModeContext } from '../types';
 
 export class FencedDivBlockProcessor implements BlockDomProcessor {
@@ -12,33 +11,6 @@ export class FencedDivBlockProcessor implements BlockDomProcessor {
     }
 
     process(context: ReadingModeContext): void {
-        if (context.app) {
-            void scheduleFencedDivProcessingWithFullSource(context);
-            return;
-        }
-
-        scheduleFencedDivProcessing(
-            context.element,
-            context.sourcePath,
-            context.config,
-            context.sectionInfo?.text
-        );
+        scheduleFencedDivProcessing(context.element, context.sourcePath, context.config);
     }
-}
-
-async function scheduleFencedDivProcessingWithFullSource(
-    context: ReadingModeContext
-): Promise<void> {
-    const fullSourceText = await readFullSourceText(context.sourcePath, context.app);
-    const processingRoot = fullSourceText
-        ? context.element.closest<HTMLElement>('.markdown-preview-view') ?? context.element
-        : context.element;
-    const sourceText = fullSourceText ?? context.sectionInfo?.text;
-
-    scheduleFencedDivProcessing(
-        processingRoot,
-        context.sourcePath,
-        context.config,
-        sourceText
-    );
 }

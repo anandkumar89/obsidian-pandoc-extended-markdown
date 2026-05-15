@@ -2,8 +2,7 @@ import { WidgetType, EditorView } from '@codemirror/view';
 import { setTooltip, App, Component } from 'obsidian';
 import { DECORATION_STYLES } from '../../core/constants';
 import { setupRenderedHoverPreview } from '../../shared/utils/hoverPopovers';
-import type { ReferenceContext } from '../../shared/utils/contextUtils';
-
+import { ProcessingContext } from '../../shared/rendering/ContentProcessorRegistry';
 /**
  * Base class for all plugin widgets.
  * Provides common functionality for DOM creation, event handling, and lifecycle management.
@@ -113,7 +112,7 @@ export abstract class BaseWidget extends WidgetType {
         content: string,
         app: App,
         component: Component,
-        context?: ReferenceContext,
+        context?: ProcessingContext,
         cssClass?: string
     ): void {
         setupRenderedHoverPreview(

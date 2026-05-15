@@ -94,94 +94,41 @@
     counter-reset: pem-list;
 }
 
-.pem-list-paren > li {
+.pem-list-paren>li {
     counter-increment: pem-list;
     list-style: none;
     position: relative;
 }
 
-.pem-list-paren > li::before {
+.pem-list-paren>li::before {
     content: counter(pem-list) ") ";
     position: absolute;
     left: -2em;
 }
 
 /* Definition Lists Styles */
-:where(.pem-definition-list, .cm-pem-definition-term, .cm-pem-definition-paragraph) {
-    --pem-definition-list-bg: transparent;
-    --pem-definition-list-border-color: transparent;
-    --pem-definition-list-border-radius: 0;
-    --pem-definition-list-border-style: solid;
-    --pem-definition-list-border-width: 0;
-    --pem-definition-list-padding: 0;
-    --pem-definition-term-align: inherit;
-    --pem-definition-term-color: inherit;
-    --pem-definition-term-font-size: inherit;
-    --pem-definition-term-font-style: normal;
-    --pem-definition-term-font-weight: bold;
-    --pem-definition-term-text-decoration: underline;
-    --pem-definition-desc-align: inherit;
-    --pem-definition-desc-color: inherit;
-    --pem-definition-desc-font-size: inherit;
-    --pem-definition-desc-font-style: normal;
-    --pem-definition-desc-font-weight: inherit;
-    --pem-definition-desc-indent: 3ch;
-    --pem-definition-desc-marker-color: var(--list-marker-color, var(--text-muted));
-    --pem-definition-desc-marker-content: "•";
-    --pem-definition-desc-text-decoration: none;
-}
-
 .markdown-preview-view .pem-definition-list {
-    background: var(--pem-definition-list-bg);
-    border: var(--pem-definition-list-border-width) var(--pem-definition-list-border-style) var(--pem-definition-list-border-color);
-    border-radius: var(--pem-definition-list-border-radius);
     margin: 1em 0;
-    padding: var(--pem-definition-list-padding);
 }
 
 .markdown-preview-view .pem-definition-term {
-    color: var(--pem-definition-term-color);
-    font-size: var(--pem-definition-term-font-size);
-    font-style: var(--pem-definition-term-font-style);
-    font-weight: var(--pem-definition-term-font-weight);
+    font-weight: bold;
+    text-decoration: underline;
     margin-top: 0.5em;
     margin-bottom: 0.25em;
-    text-align: var(--pem-definition-term-align);
-    text-decoration: var(--pem-definition-term-text-decoration);
 }
 
 .markdown-preview-view .pem-list-definition-desc {
-    color: var(--pem-definition-desc-color);
-    display: list-item;
-    font-size: var(--pem-definition-desc-font-size);
-    font-style: var(--pem-definition-desc-font-style);
-    font-weight: var(--pem-definition-desc-font-weight);
-    list-style-position: outside;
-    list-style-type: disc;
+    margin-left: 2em;
     margin-bottom: 0.25em;
-    margin-inline-start: var(--pem-definition-desc-indent);
-    text-align: var(--pem-definition-desc-align);
-    text-decoration: var(--pem-definition-desc-text-decoration);
+    position: relative;
 }
 
-.markdown-preview-view .pem-definition-desc-list {
-    list-style-position: outside;
-    list-style-type: disc;
-    margin: 0;
-    padding-inline-start: 0;
-}
-
-.markdown-preview-view .pem-definition-desc-item {
-    margin-block: var(--list-spacing, 0.075em);
-}
-
-.markdown-preview-view .pem-definition-desc-item::marker {
-    color: var(--pem-definition-desc-marker-color);
-    content: var(--pem-definition-desc-marker-content) " ";
-}
-
-.cm-pem-definition-paragraph .pem-list-marker {
-    color: var(--pem-definition-desc-marker-color);
+.markdown-preview-view .pem-list-definition-desc::before {
+    color: var(--list-marker-color, var(--text-muted));
+    content: "•";
+    left: -1em;
+    position: absolute;
 }
 
 .pem-definition-items {
@@ -197,17 +144,6 @@
 /* Definition content paragraphs - override Obsidian's indented text styling */
 .cm-pem-definition-paragraph {
     /* No extra padding - indentation handled by spaces/tabs */
-    background: var(--pem-definition-list-bg);
-    border-color: var(--pem-definition-list-border-color);
-    border-radius: var(--pem-definition-list-border-radius);
-    border-style: var(--pem-definition-list-border-style);
-    border-width: var(--pem-definition-list-border-width);
-    color: var(--pem-definition-desc-color);
-    font-size: var(--pem-definition-desc-font-size);
-    font-style: var(--pem-definition-desc-font-style);
-    font-weight: var(--pem-definition-desc-font-weight);
-    text-align: var(--pem-definition-desc-align);
-    text-decoration: var(--pem-definition-desc-text-decoration);
     text-indent: 0 !important;
 }
 
@@ -231,193 +167,350 @@
 
 /* In live preview mode */
 .cm-line .pem-definition-term {
-    color: var(--pem-definition-term-color);
-    font-size: var(--pem-definition-term-font-size);
-    font-style: var(--pem-definition-term-font-style);
-    font-weight: var(--pem-definition-term-font-weight);
-    text-decoration: var(--pem-definition-term-text-decoration);
+    font-weight: bold;
+    text-decoration: underline;
 }
 
-:where(.pem-fenced-div),
-:where(.cm-pem-fenced-div-line),
-:where(.cm-content > .cm-pem-fenced-div-line + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line)) {
+.pem-fenced-div {
     --pem-fenced-div-accent: var(--interactive-accent);
     --pem-fenced-div-bg: var(--background-secondary);
     --pem-fenced-div-inner-bg: var(--background-primary-alt, var(--background-primary));
     --pem-fenced-div-nest-indent: 1.5em;
-    --pem-fenced-div-content-indent: 1.35em;
-    --pem-fenced-div-rail-width: 3px;
-    --pem-fenced-div-border-color: transparent;
-    --pem-fenced-div-border-style: solid;
-    --pem-fenced-div-border-width: 0;
-    --pem-fenced-div-border-radius: 0;
+    --pem-fenced-div-surface: var(--pem-fenced-div-bg);
+
+    /* Semantic Colors */
+    --pem-block-theorem-accent: #3b82f6;
+    /* Blue */
+    --pem-block-lemma-accent: #10b981;
+    /* Green */
+    --pem-block-proof-accent: #6b7280;
+    /* Gray */
+    --pem-block-definition-accent: #f59e0b;
+    /* Amber */
+    --pem-block-example-accent: #8b5cf6;
+    /* Violet */
+    --pem-block-exercise-accent: #ef4444;
+    /* Red */
+
+    background: transparent;
+    box-shadow: none;
+    margin: 1em 0;
+    padding: 0;
 }
 
-.pem-fenced-div {
-    background: var(--pem-fenced-div-bg);
-    border: var(--pem-fenced-div-border-width) var(--pem-fenced-div-border-style) var(--pem-fenced-div-border-color);
-    border-radius: var(--pem-fenced-div-border-radius);
-    box-shadow: inset var(--pem-fenced-div-rail-width) 0 0 var(--pem-fenced-div-accent);
-    margin: 1em 0;
-    padding: 0.55em 1em 0.7em var(--pem-fenced-div-content-indent);
+.pem-fenced-div.theorem,
+.pem-fenced-div.lemma {
+    --pem-fenced-div-accent: var(--pem-block-theorem-accent);
+}
+
+.pem-fenced-div.proof {
+    --pem-fenced-div-accent: var(--pem-block-proof-accent);
+}
+
+.pem-fenced-div.definition {
+    --pem-fenced-div-accent: var(--pem-block-definition-accent);
+}
+
+.pem-fenced-div.example {
+    --pem-fenced-div-accent: var(--pem-block-example-accent);
+}
+
+.pem-fenced-div.exercise {
+    --pem-fenced-div-accent: var(--pem-block-exercise-accent);
+}
+
+/* Subfigures styling */
+.pem-fenced-div.subfigures .pem-fenced-div-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    align-items: center;
+}
+
+.pem-fenced-div.subfigures .pem-fenced-div-content>p:has(img) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: center;
+    align-items: flex-end;
+    width: 100%;
+    margin: 0;
+}
+
+.pem-fenced-div.subfigures .pem-fenced-div-content>p:has(img)>* {
+    flex: 1 1 0%;
+    min-width: 0;
+    /* Prevents flex items from overflowing */
+    text-align: center;
+}
+
+.pem-fenced-div.subfigures .pem-fenced-div-content>p:has(img) img {
+    max-width: 100%;
+    height: auto;
+}
+
+.pem-fenced-div.subfigures .pem-fenced-div-content>p:not(:has(img)):last-child {
+    text-align: center;
+    margin-top: 1em;
+    font-weight: bold;
+    width: 100%;
+}
+
+.pem-fenced-div.subfigures {
+    --pem-fenced-div-accent: var(--text-muted);
 }
 
 .pem-fenced-div .pem-fenced-div {
-    background: var(--pem-fenced-div-inner-bg);
+    --pem-fenced-div-surface: transparent;
+    background: transparent;
+    box-shadow: none;
+    padding-left: 0;
     margin-bottom: 0.4em;
     margin-top: 0.5em;
 }
 
-.pem-fenced-div-inner {
-    margin-inline-start: var(--pem-fenced-div-nest-indent);
+.pem-fenced-div .pem-fenced-div-inner {
+    margin-inline-start: 0;
 }
 
-.pem-fenced-div > .pem-fenced-div-title {
+.pem-fenced-div-inner {
+    margin-inline-start: 0;
+}
+
+.pem-fenced-div>.pem-fenced-div-header {
     display: block;
     margin-bottom: 0.35em;
 }
 
-.pem-fenced-div-content > :first-child {
+.pem-fenced-div-content> :first-child {
     margin-top: 0;
 }
 
-.pem-fenced-div-content > :last-child {
+.pem-fenced-div-content> :last-child {
     margin-bottom: 0;
+}
+
+/* Proof QED Support */
+.pem-fenced-div.proof .proof-content::after {
+    content: "\25A1";
+    float: right;
+    margin-top: 0.25em;
+    font-weight: normal;
 }
 
 /* CodeMirror-specific definition term styling */
 .cm-pem-definition-term {
-    background: var(--pem-definition-list-bg);
-    border-color: var(--pem-definition-list-border-color);
-    border-radius: var(--pem-definition-list-border-radius);
-    border-style: var(--pem-definition-list-border-style);
-    border-width: var(--pem-definition-list-border-width);
-    color: var(--pem-definition-term-color);
-    font-size: var(--pem-definition-term-font-size);
-    font-style: var(--pem-definition-term-font-style);
-    font-weight: var(--pem-definition-term-font-weight);
-    text-align: var(--pem-definition-term-align);
-    text-decoration: var(--pem-definition-term-text-decoration);
-}
-
-.cm-pem-fenced-div-line,
-.cm-content > .cm-pem-fenced-div-line + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) {
-    --pem-fenced-div-current-indent: 0px;
-    --pem-fenced-div-rail-1: linear-gradient(
-            to right,
-            transparent 0,
-            transparent var(--pem-fenced-div-nest-indent),
-            var(--pem-fenced-div-accent) var(--pem-fenced-div-nest-indent),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) calc(var(--pem-fenced-div-nest-indent) + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) 100%
-        );
-    --pem-fenced-div-rail-2: linear-gradient(
-            to right,
-            transparent 0,
-            transparent calc(var(--pem-fenced-div-nest-indent) * 2),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 2),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 2 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) calc(var(--pem-fenced-div-nest-indent) * 2 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) 100%
-        );
-    --pem-fenced-div-rail-3: linear-gradient(
-            to right,
-            transparent 0,
-            transparent calc(var(--pem-fenced-div-nest-indent) * 3),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 3),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 3 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) calc(var(--pem-fenced-div-nest-indent) * 3 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) 100%
-        );
-    --pem-fenced-div-rail-4: linear-gradient(
-            to right,
-            transparent 0,
-            transparent calc(var(--pem-fenced-div-nest-indent) * 4),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 4),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 4 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) calc(var(--pem-fenced-div-nest-indent) * 4 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) 100%
-        );
-    --pem-fenced-div-rail-5: linear-gradient(
-            to right,
-            transparent 0,
-            transparent calc(var(--pem-fenced-div-nest-indent) * 5),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 5),
-            var(--pem-fenced-div-accent) calc(var(--pem-fenced-div-nest-indent) * 5 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) calc(var(--pem-fenced-div-nest-indent) * 5 + var(--pem-fenced-div-rail-width)),
-            var(--pem-fenced-div-inner-bg) 100%
-        );
-    --pem-fenced-div-surface: var(--pem-fenced-div-bg);
-    border-inline-end: var(--pem-fenced-div-border-width) var(--pem-fenced-div-border-style) var(--pem-fenced-div-border-color);
-    border-inline-start: var(--pem-fenced-div-border-width) var(--pem-fenced-div-border-style) var(--pem-fenced-div-border-color);
-    box-shadow: inset var(--pem-fenced-div-rail-width) 0 0 var(--pem-fenced-div-accent) !important;
+    text-decoration: underline;
 }
 
 .cm-pem-fenced-div-line {
-    background: var(--pem-fenced-div-surface) !important;
-    padding-inline-end: 1em;
+    --pem-fenced-div-accent: var(--interactive-accent);
+    --pem-fenced-div-bg: var(--background-secondary);
+    --pem-fenced-div-inner-bg: var(--background-primary-alt, var(--background-primary));
+    --pem-fenced-div-nest-indent: 1.5em;
+    --pem-fenced-div-current-indent: 0px;
+    --pem-fenced-div-surface: var(--pem-fenced-div-bg);
+
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-inline-start: 0 !important;
+    padding-inline-end: 0;
 }
 
-.cm-pem-fenced-div-line:not(.HyperMD-list-line) {
-    padding-inline-start: var(--pem-fenced-div-content-indent) !important;
+/* Apply semantic accents in Live Preview */
+.cm-pem-fenced-div-theorem,
+.cm-pem-fenced-div-lemma,
+.theorem,
+.lemma {
+    --pem-fenced-div-accent: #3b82f6 !important;
 }
 
-.cm-pem-fenced-div-inner,
-.cm-content > .cm-pem-fenced-div-inner + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) {
-    --pem-fenced-div-current-indent: var(--pem-fenced-div-nest-indent);
-    --pem-fenced-div-surface: var(--pem-fenced-div-rail-1), var(--pem-fenced-div-bg);
+.cm-pem-fenced-div-proof,
+.proof {
+    --pem-fenced-div-accent: #6b7280 !important;
 }
 
-.cm-pem-fenced-div-inner:not(.HyperMD-list-line) {
-    padding-inline-start: calc(var(--pem-fenced-div-current-indent) + var(--pem-fenced-div-content-indent)) !important;
+.cm-pem-fenced-div-definition,
+.definition {
+    --pem-fenced-div-accent: #f59e0b !important;
 }
 
-/* Preserve Obsidian's native list padding/text-indent and prepend only the fenced-div content offset. */
-.cm-pem-fenced-div-line.HyperMD-list-line::before {
-    content: "";
-    display: inline-block;
-    width: calc(var(--pem-fenced-div-current-indent) + var(--pem-fenced-div-content-indent));
+.cm-pem-fenced-div-example,
+.example {
+    --pem-fenced-div-accent: #8b5cf6 !important;
+}
+
+.cm-pem-fenced-div-exercise,
+.exercise {
+    --pem-fenced-div-accent: #ef4444 !important;
+}
+
+/* Nested blocks should have no decorations */
+.cm-pem-fenced-div-inner {
+    --pem-fenced-div-surface: transparent;
+    --pem-fenced-div-current-indent: 0px;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-inline-start: 0 !important;
+    border: none !important;
 }
 
 .cm-pem-fenced-div-depth-3,
-.cm-content > .cm-pem-fenced-div-depth-3 + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) {
-    --pem-fenced-div-current-indent: calc(var(--pem-fenced-div-nest-indent) * 2);
-    --pem-fenced-div-surface: var(--pem-fenced-div-rail-2), var(--pem-fenced-div-rail-1), var(--pem-fenced-div-bg);
-}
-
 .cm-pem-fenced-div-depth-4,
-.cm-content > .cm-pem-fenced-div-depth-4 + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) {
-    --pem-fenced-div-current-indent: calc(var(--pem-fenced-div-nest-indent) * 3);
-    --pem-fenced-div-surface: var(--pem-fenced-div-rail-3), var(--pem-fenced-div-rail-2), var(--pem-fenced-div-rail-1), var(--pem-fenced-div-bg);
-}
-
 .cm-pem-fenced-div-depth-5,
-.cm-content > .cm-pem-fenced-div-depth-5 + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) {
-    --pem-fenced-div-current-indent: calc(var(--pem-fenced-div-nest-indent) * 4);
-    --pem-fenced-div-surface: var(--pem-fenced-div-rail-4), var(--pem-fenced-div-rail-3), var(--pem-fenced-div-rail-2), var(--pem-fenced-div-rail-1), var(--pem-fenced-div-bg);
+.cm-pem-fenced-div-depth-6 {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-inline-start: 0 !important;
 }
 
-.cm-pem-fenced-div-depth-6,
-.cm-content > .cm-pem-fenced-div-depth-6 + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) {
-    --pem-fenced-div-current-indent: calc(var(--pem-fenced-div-nest-indent) * 5);
-    --pem-fenced-div-surface: var(--pem-fenced-div-rail-5), var(--pem-fenced-div-rail-4), var(--pem-fenced-div-rail-3), var(--pem-fenced-div-rail-2), var(--pem-fenced-div-rail-1), var(--pem-fenced-div-bg);
+/* Math block background inheritance in Live Preview */
+/* This fix uses sibling selectors to apply the background to math blocks that follow div lines */
+.cm-content>.cm-pem-fenced-div-line+.math.math-block,
+.cm-content>.cm-pem-fenced-div-line+.cm-embed-block,
+.cm-content>.cm-pem-fenced-div-line+.cm-math+.math-block {
+    background: transparent !important;
+    padding-inline-start: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Styled Math Blocks in Live Preview */
+.cm-content>.cm-pem-fenced-div-line.fancy+.math.math-block,
+.cm-content>.cm-pem-fenced-div-line.fancy+.cm-embed-block,
+.cm-content>.cm-pem-fenced-div-line.fancy+.cm-math+.math-block {
+    background: var(--background-secondary) !important;
+    padding-inline-start: 1.35em !important;
+    box-shadow: inset 4px 0 0 var(--pem-fenced-div-accent) !important;
+}
+
+.cm-content>.cm-pem-fenced-div-line.boxed+.math.math-block,
+.cm-content>.cm-pem-fenced-div-line.boxed+.cm-embed-block,
+.cm-content>.cm-pem-fenced-div-line.boxed+.cm-math+.math-block {
+    border-left: 1px solid var(--background-modifier-border);
+    border-right: 1px solid var(--background-modifier-border);
+    padding-inline-start: 1.35em !important;
+}
+
+.cm-content>.cm-pem-fenced-div-line[class*="pastel-"]+.math.math-block,
+.cm-content>.cm-pem-fenced-div-line[class*="pastel-"]+.cm-embed-block,
+.cm-content>.cm-pem-fenced-div-line[class*="pastel-"]+.cm-math+.math-block {
+    background-color: var(--pastel-bg) !important;
+    box-shadow: inset 4px 0 0 var(--pastel-border) !important;
+    padding-inline-start: 1.35em !important;
+}
+
+/* Depth-aware math block styling - matched to new 'no decoration' nested rules */
+.cm-content>.cm-pem-fenced-div-inner+.math.math-block,
+.cm-content>.cm-pem-fenced-div-inner+.cm-embed-block,
+.cm-content>.cm-pem-fenced-div-depth-3+.math.math-block,
+.cm-content>.cm-pem-fenced-div-depth-4+.math.math-block,
+.cm-content>.cm-pem-fenced-div-depth-5+.math.math-block,
+.cm-content>.cm-pem-fenced-div-inner+.cm-pem-fenced-div-depth-6+.math.math-block {
+    background: transparent !important;
+    padding-inline-start: 0 !important;
+    box-shadow: none !important;
+}
+
+/* ═══ Fancy Boxes (Custom Styles) ═══ */
+
+/* Base for all styled boxes */
+.pem-fenced-div.boxed,
+.pem-fenced-div.fancy,
+.pem-fenced-div[class*="pastel-"],
+.cm-pem-fenced-div-line.boxed,
+.cm-pem-fenced-div-line.fancy,
+
+.cm-pem-fenced-div-line.boxed,
+.cm-pem-fenced-div-line.fancy,
+
+/* .boxed style */
+.pem-fenced-div.boxed {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+}
+
+.cm-pem-fenced-div-line.boxed {
+    border-left: 1px solid var(--background-modifier-border);
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.cm-pem-fenced-div-open.boxed {
+    border-top: 1px solid var(--background-modifier-border);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+.cm-pem-fenced-div-close.boxed {
+    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* .fancy style (Left Accent) */
+.pem-fenced-div.fancy {
+    background: var(--background-secondary);
+    box-shadow: inset 4px 0 0 var(--pem-fenced-div-accent);
+}
+
+.cm-pem-fenced-div-line.fancy {
+    background: var(--background-secondary) !important;
+    box-shadow: inset 4px 0 0 var(--pem-fenced-div-accent) !important;
+}
+
+/* Pastel Styles */
+.pem-fenced-div.pastel-blue,
+.cm-pem-fenced-div-line.pastel-blue {
+    --pastel-bg: #f0f9ff;
+    --pastel-border: #0ea5e9;
+}
+
+.pem-fenced-div.pastel-green,
+.cm-pem-fenced-div-line.pastel-green {
+    --pastel-bg: #f0fdf4;
+    --pastel-border: #22c55e;
+}
+
+.pem-fenced-div.pastel-amber,
+.cm-pem-fenced-div-line.pastel-amber {
+    --pastel-bg: #fffbeb;
+    --pastel-border: #f59e0b;
+}
+
+.pem-fenced-div.pastel-purple,
+.cm-pem-fenced-div-line.pastel-purple {
+    --pastel-bg: #faf5ff;
+    --pastel-border: #a855f7;
+}
+
+.pem-fenced-div.pastel-red,
+.cm-pem-fenced-div-line.pastel-red {
+    --pastel-bg: #fef2f2;
+    --pastel-border: #ef4444;
+}
+
+.pem-fenced-div[class*="pastel-"] {
+    background-color: var(--pastel-bg);
+    border-left: 4px solid var(--pastel-border);
+    border-radius: 4px;
+}
+
+.cm-pem-fenced-div-line[class*="pastel-"] {
+    background-color: var(--pastel-bg) !important;
+    box-shadow: inset 4px 0 0 var(--pastel-border) !important;
 }
 
 .cm-pem-fenced-div-open {
-    border-start-end-radius: var(--pem-fenced-div-border-radius);
-    border-start-start-radius: var(--pem-fenced-div-border-radius);
-    border-top: var(--pem-fenced-div-border-width) var(--pem-fenced-div-border-style) var(--pem-fenced-div-border-color);
     padding-top: 0.5em;
     padding-bottom: 0.1em;
 }
 
 .cm-pem-fenced-div-close {
-    border-bottom: var(--pem-fenced-div-border-width) var(--pem-fenced-div-border-style) var(--pem-fenced-div-border-color);
-    border-end-end-radius: var(--pem-fenced-div-border-radius);
-    border-end-start-radius: var(--pem-fenced-div-border-radius);
+    background: transparent !important;
+    box-shadow: none !important;
     padding-top: 0;
     padding-bottom: 0;
+    border-bottom: 1px dashed var(--background-modifier-border);
 }
 
 .cm-line.cm-pem-fenced-div-close:not(.cm-active) {
@@ -434,35 +527,111 @@
     min-height: 1.4em;
 }
 
-.cm-pem-fenced-div-content {
+/* Proof QED Support (Live Preview) */
+.cm-pem-fenced-div-proof.cm-pem-fenced-div-close::after {
+    content: "\25A1";
+    float: right;
+    margin-right: 0.5em;
+    font-weight: normal;
+    position: relative;
+    top: -0.1em;
+}
+
+.pem-fenced-div-content {
     padding-top: 0.1em;
     padding-bottom: 0.2em;
-}
-
-.cm-content > .cm-pem-fenced-div-line + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) {
-    background: var(--pem-fenced-div-surface) !important;
-    margin: 0;
-    padding-bottom: 0.2em !important;
-    padding-inline-start: calc(var(--pem-fenced-div-current-indent) + var(--pem-fenced-div-content-indent)) !important;
-    padding-inline-end: 1em !important;
-    padding-top: 0.1em !important;
-}
-
-.cm-line.cm-pem-fenced-div-line :is(.cm-embed-block, .markdown-rendered, .math, .cm-math, mjx-container),
-.cm-content > .cm-pem-fenced-div-line + .math.math-block.cm-embed-block:has(+ .cm-pem-fenced-div-line) :is(.markdown-rendered, .math, .cm-math, mjx-container) {
-    background: transparent !important;
 }
 
 .cm-pem-fenced-div-content-end {
     padding-bottom: 0.5em;
 }
 
-.pem-fenced-div-header {
-    display: inline-block;
+/* Universal transparency for math/embeds inside decorated lines */
+.cm-pem-fenced-div-line:not(.fancy):not(.boxed):not([class*="pastel-"]) .math-block,
+.cm-pem-fenced-div-line:not(.fancy):not(.boxed):not([class*="pastel-"]) .math,
+.cm-pem-fenced-div-line:not(.fancy):not(.boxed):not([class*="pastel-"]) .cm-embed-block,
+.cm-pem-fenced-div-line:not(.fancy):not(.boxed):not([class*="pastel-"]) mjx-container,
+.cm-pem-fenced-div-content:not(.fancy):not(.boxed):not([class*="pastel-"]) .math-block,
+.cm-pem-fenced-div-content:not(.fancy):not(.boxed):not([class*="pastel-"]) .math,
+.cm-pem-fenced-div-content:not(.fancy):not(.boxed):not([class*="pastel-"]) .cm-embed-block,
+.cm-pem-fenced-div-content:not(.fancy):not(.boxed):not([class*="pastel-"]) mjx-container,
+.pem-fenced-div:not(.fancy):not(.boxed):not([class*="pastel-"]) .math-block,
+.pem-fenced-div:not(.fancy):not(.boxed):not([class*="pastel-"]) .cm-embed-block,
+.pem-fenced-div:not(.fancy):not(.boxed):not([class*="pastel-"]) mjx-container,
+.cm-pem-fenced-div-line:not(.fancy):not(.boxed):not([class*="pastel-"]) .cm-math,
+.cm-pem-fenced-div-line:not(.fancy):not(.boxed):not([class*="pastel-"]) .cm-content[contenteditable=false] {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
 }
 
-.pem-fenced-div-header,
-.pem-fenced-div > .pem-fenced-div-title {
+/* ═══ Figure Panel ═══ */
+.pem-figure-panel-container {
+    padding: 8px;
+}
+
+.pem-figure-panel-row {
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pem-figure-panel-row:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.pem-figure-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.pem-figure-title {
+    font-size: 0.9em;
+    color: var(--text-normal);
+}
+
+.pem-figure-inline-title {
+    font-weight: normal;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.pem-figure-label {
+    font-size: 0.8em;
+    padding: 2px 6px;
+    background-color: var(--background-secondary);
+    border-radius: 4px;
+    color: var(--text-accent);
+    cursor: copy;
+}
+
+.pem-figure-label:hover {
+    background-color: var(--background-modifier-border);
+}
+
+.pem-figure-info {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Lists inside fenced divs — preserve indentation without excess */
+.cm-pem-fenced-div-content.HyperMD-list-line {
+    text-indent: 0 !important;
+}
+
+.cm-pem-fenced-div-content.HyperMD-list-line .cm-list-indent .cm-indent {
+    width: var(--list-indent-editing, 2em);
+}
+
+.pem-fenced-div-header {
+    display: inline-block;
     color: var(--text-normal);
     font-weight: 700;
     font-size: var(--font-ui-medium);
@@ -506,6 +675,12 @@
     text-decoration: underline;
 }
 
+.pem-reference-invalid {
+    color: var(--text-error) !important;
+    text-decoration: underline wavy var(--text-error) !important;
+    cursor: help !important;
+}
+
 .cm-line .pem-definition-marker {
     display: none;
 }
@@ -517,12 +692,12 @@
     padding-inline-start: var(--list-indent, 2em);
 }
 
-.markdown-preview-view ol.pem-example-list > li.pem-example-item {
+.markdown-preview-view ol.pem-example-list>li.pem-example-item {
     display: list-item;
     margin: var(--list-spacing, 0.075em) 0;
 }
 
-.markdown-preview-view ol.pem-example-list > li.pem-example-item::marker {
+.markdown-preview-view ol.pem-example-list>li.pem-example-item::marker {
     color: var(--list-marker-color, var(--text-muted));
     content: "(" attr(data-example-number) ") ";
 }
@@ -531,7 +706,7 @@
     margin: var(--p-spacing, 1rem) 0;
 }
 
-.markdown-preview-view p.pem-custom-label-item > strong:first-child {
+.markdown-preview-view p.pem-custom-label-item>strong:first-child {
     color: var(--text-normal);
     display: inline-block;
     margin-inline-end: 0.35em;
@@ -581,6 +756,7 @@
 
 /* Source Mode - preserve original text */
 .is-live-preview:not(.is-readable-line-width) .cm-s-obsidian {
+
     .pem-list-upper-alpha,
     .pem-list-lower-alpha,
     .pem-list-upper-roman,
@@ -612,7 +788,8 @@
     display: inline-block;
     pointer-events: none;
     white-space: pre;
-    width: 0; /* width is set inline by widget */
+    width: 0;
+    /* width is set inline by widget */
     flex-shrink: 0;
 }
 
@@ -660,6 +837,14 @@
     opacity: 0.7;
 }
 
+/* Heading Number Styles */
+.pem-heading-number {
+    font-family: inherit;
+    font-weight: inherit !important;
+    opacity: 0.6;
+    margin-right: 0.5em;
+}
+
 /* Superscript and Subscript Styles */
 .pem-superscript,
 sup.pem-superscript {
@@ -680,16 +865,10 @@ sub.pem-subscript {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 8px;
+    padding: 0;
 }
 
-.pem-list-panel-icon-row {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    padding: 4px 0;
-    margin-bottom: 4px;
-}
+
 
 .pem-list-panel-icon-button {
     width: 32px;
@@ -770,7 +949,45 @@ sub.pem-subscript {
 .pem-list-panel-content-container {
     flex: 1;
     overflow-y: auto;
+    padding: 0;
 }
+
+.pem-panel-search-container {
+    display: flex;
+    align-items: center;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 0 6px;
+    flex: 1;
+    min-width: 32px;
+    height: 26px;
+    transition: all 0.2s ease;
+    margin: 0 4px;
+}
+
+.pem-panel-search-icon {
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+
+
+/* Responsive Search: Show only icon when narrow */
+@container (max-width: 250px) {
+    .pem-panel-search-input {
+        display: none;
+    }
+
+    .pem-panel-search-container {
+        flex: 0 0 28px;
+        justify-content: center;
+        padding: 0;
+        margin: 0;
+    }
+}
+
 
 /* Panel Order Settings Styles */
 .pem-panel-order-info {
@@ -1146,44 +1363,48 @@ td.pem-definition-list-view-definitions:hover {
 }
 
 /* Fenced Div Panel Styles */
-table.pem-fenced-div-panel-container {
+.pem-fenced-div-panel-container {
     width: 100%;
-    border-collapse: collapse;
-    table-layout: auto;
 }
 
-tr.pem-fenced-div-panel-row {
+.pem-fenced-div-panel-row {
     border-bottom: 1px solid var(--background-modifier-border-hover);
     transition: background-color 0.15s ease;
+    padding: 4px 0;
 }
 
-tr.pem-fenced-div-panel-row:hover {
+.pem-fenced-div-panel-row:hover {
     background-color: var(--background-modifier-hover);
 }
 
-td.pem-fenced-div-panel-title {
-    width: 1%;
+.pem-fenced-div-panel-header {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.pem-fenced-div-panel-title {
     font-size: 0.9em;
     font-weight: 600;
     color: var(--text-normal);
     cursor: default;
-    padding: 6px 8px;
-    vertical-align: top;
+    padding: 4px 8px;
     white-space: nowrap;
-    overflow: visible;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-td.pem-fenced-div-panel-label {
-    width: 1%;
+.pem-fenced-div-panel-label {
     font-family: var(--font-monospace);
     font-size: 0.9em;
     color: var(--text-accent);
     cursor: pointer;
-    padding: 6px 8px;
+    padding: 4px 8px;
     border-radius: 3px;
-    vertical-align: top;
     white-space: nowrap;
-    overflow: visible;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: background-color 0.15s ease;
 }
 
@@ -1195,42 +1416,41 @@ td.pem-fenced-div-panel-label:not(:empty):hover {
     background-color: var(--background-modifier-hover);
 }
 
-td.pem-fenced-div-panel-content {
-    width: auto;
+.pem-fenced-div-panel-content {
+    width: 100%;
     font-size: 0.9em;
     color: var(--text-normal);
     cursor: pointer;
-    padding: 6px 8px;
+    padding: 2px 8px 6px 8px;
     border-radius: 3px;
-    vertical-align: top;
     white-space: pre-wrap;
     word-break: break-word;
     line-height: 1.3;
     transition: background-color 0.15s ease;
 }
 
-td.pem-fenced-div-panel-content p {
+.pem-fenced-div-panel-content p {
     margin: 0;
     line-height: 1.3;
 }
 
-td.pem-fenced-div-panel-content p:not(:last-child) {
+.pem-fenced-div-panel-content p:not(:last-child) {
     margin-bottom: 0.3em;
 }
 
-td.pem-fenced-div-panel-content ul,
-td.pem-fenced-div-panel-content ol {
+.pem-fenced-div-panel-content ul,
+.pem-fenced-div-panel-content ol {
     margin: 0;
     padding-left: 1.2em;
     line-height: 1.3;
 }
 
-td.pem-fenced-div-panel-content li {
+.pem-fenced-div-panel-content li {
     margin: 0;
     line-height: 1.3;
 }
 
-td.pem-fenced-div-panel-content:hover {
+.pem-fenced-div-panel-content:hover {
     background-color: var(--background-modifier-hover);
     color: var(--text-accent);
 }
@@ -1304,7 +1524,7 @@ td.pem-footnote-panel-content:hover {
     background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     font-size: 0.9em;
 }
 
@@ -1354,6 +1574,7 @@ td.pem-footnote-panel-content:hover {
     0% {
         background-color: rgba(255, 213, 0, 0.4);
     }
+
     100% {
         background-color: transparent;
     }
@@ -1368,5 +1589,1222 @@ td.pem-footnote-panel-content:hover {
 .custom-label-hover-preview {
     font-family: var(--font-text);
     line-height: 1.5;
+    color: var(--text-normal);
+}
+
+/* ═══ Redesigned Panel Top Bar ═══ */
+
+.pem-panel-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+
+.pem-panel-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+    margin-bottom: 0;
+    gap: 2px;
+}
+
+.pem-module-actions-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center icons at bottom */
+    gap: 24px;
+    /* More space between icons */
+    padding: 12px 8px;
+    margin-top: auto;
+    /* Push to bottom */
+}
+
+.pem-module-actions-container button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    opacity: 0.6;
+    transition: all 0.2s;
+    height: auto !important;
+    width: auto !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pem-module-actions-container button:hover {
+    opacity: 1;
+    background: transparent !important;
+}
+
+.pem-module-actions-container button.is-active {
+    opacity: 1;
+    color: var(--text-accent) !important;
+}
+
+
+
+.pem-panel-search-bar {
+    padding: 4px 8px;
+    margin-top: 0;
+    border: none !important;
+}
+
+.pem-panel-search-bar.is-hidden {
+    display: none;
+}
+
+.pem-search-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--background-modifier-form-field);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 0 8px;
+    height: 32px;
+}
+
+.pem-search-icon-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    color: var(--text-muted);
+}
+
+.pem-search-icon-inner svg {
+    width: 14px;
+    height: 14px;
+}
+
+.pem-panel-search-input {
+    flex: 1;
+    height: 100%;
+    font-size: 13px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    color: var(--text-normal);
+}
+
+.pem-panel-search-input:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+.pem-panel-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.pem-panel-tabs {
+    display: flex;
+    gap: 0;
+}
+
+.pem-panel-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+.pem-panel-tab {
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    transition: all 0.1s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin: 2px 1px;
+}
+
+.pem-panel-tab:hover {
+    color: var(--text-normal);
+}
+
+.pem-panel-tab.is-active {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
+.pem-tab-icon {
+    pointer-events: none;
+}
+
+.pem-tab-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.pem-panel-action-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-muted);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.pem-panel-action-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+
+/* ═══ Panel Controls (compact toggles) ═══ */
+.pem-panel-controls {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    justify-content: flex-end;
+}
+
+.pem-toggle-btn {
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    transition: all 0.15s ease;
+}
+
+.pem-toggle-btn:hover {
+    background: var(--background-modifier-hover);
+}
+
+.pem-toggle-btn.is-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.pem-toggle-icon {
+    pointer-events: none;
+}
+
+/* ═══ TOC Collapse Styles ═══ */
+.pem-toc-collapse-toggle {
+    width: 12px;
+    height: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+    border-radius: 2px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.pem-toc-collapse-toggle:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.pem-toc-collapse-placeholder {
+    width: 12px;
+    flex-shrink: 0;
+}
+
+/* Consolidated into lower definition */
+
+/* ═══ TOC File Breaks ═══ */
+.pem-toc-file-break {
+    margin: 8px 12px;
+    border-top: 1px dashed var(--background-modifier-border);
+    position: relative;
+    height: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.pem-toc-file-break:hover {
+    border-top-color: var(--text-accent);
+}
+
+.pem-toc-file-add-btn {
+    position: absolute;
+    background: var(--background-primary);
+    padding: 2px 8px;
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(0);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.pem-toc-file-break:hover .pem-toc-file-add-btn {
+    opacity: 1;
+    color: var(--text-accent);
+    border-color: var(--text-accent);
+}
+
+.pem-toc-file-add-btn:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent) !important;
+    border-color: var(--interactive-accent);
+}
+
+.pem-block-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 2px;
+    padding: 2px 4px 0 4px;
+    gap: 8px;
+}
+
+.pem-block-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-normal);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.pem-block-title-text {
+    font-weight: 600;
+}
+
+
+/* ═══ Export/Settings Panel Styles ═══ */
+
+.pem-panel-export-container .pem-panel-header {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 12px 0 6px 0;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--divider-color);
+}
+
+.pem-panel-export-container .pem-panel-header:first-child {
+    margin-top: 4px;
+}
+
+
+
+.pem-panel-export-form .setting-item-info {
+    flex: 1;
+}
+
+.pem-panel-export-form .setting-item-name {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.pem-panel-export-form .setting-item-description {
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+
+
+
+/* Consolidated into above */
+
+/* Consolidated into above */
+
+.pem-block-label {
+    font-family: var(--font-monospace);
+    font-size: 0.8em;
+    color: var(--text-accent);
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: opacity 0.15s ease;
+}
+
+.pem-block-label:hover {
+    opacity: 0.7;
+}
+
+/* ═══ Equation Panel Redesign ═══ */
+.pem-eq-panel-container {
+    width: 100%;
+}
+
+.pem-eq-panel-row {
+    border-bottom: 1px solid var(--background-modifier-border-hover);
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.pem-eq-panel-row:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.pem-eq-tag {
+    font-family: var(--font-monospace);
+    font-size: 0.85em;
+    color: var(--text-accent);
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+
+.pem-eq-tag:hover {
+    text-decoration: underline;
+}
+
+.pem-eq-preview {
+    font-size: 0.9em;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 0;
+}
+
+.pem-eq-preview .math,
+.pem-eq-preview .MathJax,
+.pem-eq-preview mjx-container {
+    font-size: 0.95em !important;
+}
+
+/* ═══ TOC Panel ═══ */
+.pem-toc-project-indicator {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pem-toc-project-name {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--text-accent);
+}
+
+.pem-toc-container {
+    width: 100%;
+}
+
+.pem-toc-entry {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    /* Remove horizontal padding */
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-radius: 4px;
+    gap: 4px;
+    min-height: 24px;
+}
+
+.pem-toc-entry:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.pem-toc-entry.pem-toc-active {
+    background-color: rgba(255, 255, 0, 0.1);
+    background-image: linear-gradient(to right, rgba(255, 255, 0, 0.15), transparent);
+    border-left: 2px solid var(--interactive-accent);
+    color: var(--text-accent);
+    font-weight: 600;
+}
+
+.pem-toc-number {
+    font-family: inherit;
+    /* Use same font as heading */
+    font-weight: inherit;
+    /* Inherit bold/normal */
+    font-size: 0.85em;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.pem-toc-level-1 {
+    padding-left: 0;
+}
+
+.pem-toc-level-2 {
+    padding-left: 12px;
+}
+
+.pem-toc-level-3 {
+    padding-left: 24px;
+}
+
+.pem-toc-level-4 {
+    padding-left: 36px;
+}
+
+.pem-toc-level-5 {
+    padding-left: 48px;
+}
+
+.pem-toc-title {
+    font-size: 0.9em;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pem-toc-level-1 .pem-toc-title {
+    font-weight: 700;
+    font-size: 0.95em;
+}
+
+.pem-toc-level-2 .pem-toc-title {
+    font-weight: 600;
+}
+
+.pem-toc-level-3 .pem-toc-title {
+    font-weight: 500;
+}
+
+.pem-toc-other-file {
+    opacity: 0.7;
+}
+
+.pem-toc-other-file:hover {
+    opacity: 1;
+}
+
+.pem-toc-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* ═══ Module Actions Container ═══ */
+.pem-module-actions {
+    display: flex;
+    gap: 4px;
+}
+
+/* ═══ Suggester Redesign ═══ */
+.pem-suggest-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+.pem-suggest-left {
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 200px;
+}
+
+.pem-suggest-tag {
+    font-family: var(--font-monospace);
+    font-size: 0.9em;
+    color: var(--text-accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pem-suggest-file {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.pem-suggest-preview {
+    flex: 1;
+    font-size: 0.85em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* ═══ Export Panel ═══ */
+
+
+
+.pem-panel-export-button-container button {
+    width: 100%;
+    padding: 10px;
+    font-weight: bold;
+}
+
+.pem-panel-export-footer {
+    margin-top: auto;
+    font-size: 0.8em;
+    color: var(--text-muted);
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 8px;
+}
+
+
+
+
+
+.pem-citation-header {
+    margin-bottom: 8px;
+}
+
+.pem-citation-main-info {
+    display: inline;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pem-citation-citekey {
+    font-family: var(--font-monospace);
+    color: var(--text-accent);
+    font-weight: 400;
+}
+
+
+.pem-citation-creators {
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.pem-citation-meta {
+    font-size: 0.85em;
+    color: var(--text-accent);
+    font-style: italic;
+}
+
+.pem-citation-abstract-toggle {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-top: 4px;
+    user-select: none;
+}
+
+.pem-citation-abstract-toggle:hover {
+    color: var(--text-accent);
+    text-decoration: underline;
+}
+
+.pem-citation-abstract {
+    font-size: 0.85em;
+    color: var(--text-normal);
+    background: var(--background-secondary);
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    line-height: 1.4;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.pem-citation-occurrences {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pem-citation-occurrence {
+    display: flex;
+    gap: 8px;
+    font-size: 0.85em;
+    padding: 4px 6px;
+    border-radius: 3px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    transition: all 0.15s ease;
+}
+
+.pem-citation-occurrence:hover {
+    background: var(--background-secondary);
+    border-color: var(--text-accent);
+}
+
+.pem-citation-location {
+    font-family: var(--font-monospace);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.pem-citation-context {
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pem-hidden {
+    display: none;
+}
+
+/* ═══ Citation Panel Enhancements ═══ */
+
+
+/* ═══ Citation Details Popup ═══ */
+.pem-citation-details-popup {
+    position: fixed;
+    z-index: 2000;
+    width: 350px;
+    max-height: 80vh;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+
+
+
+
+.pem-zotero-icon-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+
+
+
+
+
+
+
+
+.pem-popup-close {
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.pem-popup-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    line-height: 1.3;
+}
+
+.pem-popup-creators {
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.pem-popup-meta {
+    font-size: 0.9em;
+    font-style: italic;
+    color: var(--text-accent);
+}
+
+.pem-popup-section-title {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-top: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 2px;
+}
+
+
+.pem-popup-attachments {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pem-popup-attachment {
+    font-size: 0.85em;
+    padding: 4px 8px;
+    background: var(--background-primary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pem-popup-attachment:hover {
+    background: var(--background-modifier-hover);
+    border-color: var(--text-accent);
+}
+
+.pem-popup-occurrences {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pem-popup-occurrence {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pem-popup-occurrence:hover {
+    background: var(--background-modifier-hover);
+}
+
+.pem-popup-location {
+    font-family: var(--font-monospace);
+    font-size: 0.8em;
+    color: var(--text-accent);
+}
+
+.pem-no-data {
+    color: var(--text-muted);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px 0;
+}
+
+/* ═══ Project List & Export Styles ═══ */
+.pem-panel-export-container {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+
+
+.pem-browse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px !important;
+    height: 32px;
+    background: var(--background-secondary-alt) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: 4px;
+    box-shadow: none !important;
+}
+
+.pem-browse-btn:hover {
+    background: var(--background-secondary) !important;
+}
+
+.pem-browse-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.pem-panel-project-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pem-project-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--background-secondary-alt);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.pem-project-item.is-pinned {
+    border-color: var(--interactive-accent);
+    background: var(--background-primary-alt);
+}
+
+.pem-project-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.pem-project-name {
+    font-weight: 600;
+    font-size: 0.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pem-project-path {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pem-project-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+}
+
+.pem-action-icon {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pem-action-icon:hover {
+    opacity: 1;
+}
+
+.pem-action-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.pem-panel-export-form {
+    background: var(--background-secondary);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.pem-panel-export-form .setting-item {
+    border: none;
+    padding: 8px;
+}
+
+.pem-panel-export-button-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 12px;
+}
+
+.pem-pin-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    filter: grayscale(100%);
+    opacity: 0.6;
+}
+
+.pem-pin-btn:hover {
+    background: var(--background-modifier-hover);
+    opacity: 1;
+}
+
+.pem-pin-btn.is-active {
+    filter: none;
+    opacity: 1;
+}
+
+/* ═══ Settings & Export Panel ═══ */
+.pem-panel-section {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pem-panel-section:last-child {
+    border-bottom: none;
+}
+
+.pem-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    padding-left: 4px;
+}
+
+.pem-add-project-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+}
+
+.pem-project-path-input {
+    flex: 1;
+    height: 32px;
+}
+
+.pem-pinning-status {
+    background: var(--background-secondary);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.pem-pinned-name {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: var(--text-accent);
+}
+
+.pem-pinned-path {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pem-pin-current-btn {
+    width: 100%;
+    height: 36px;
+    font-weight: 500;
+}
+
+.pem-pin-current-btn.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.pem-inline-export-form {
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--background-primary-alt);
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    animation: pem-slide-down 0.2s ease-out;
+}
+
+@keyframes pem-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pem-inline-export-form .setting-item {
+    border: none;
+    padding: 4px 0;
+}
+
+.pem-do-export-btn {
+    width: 100%;
+    margin-top: 12px;
+    height: 32px;
+}
+
+.pem-project-mgmt-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 0 4px;
+}
+
+.pem-mgmt-btn {
+    flex: 1;
+    height: 32px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.pem-add-input-container {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    padding: 0 4px;
+    animation: pem-fade-in 0.2s ease-out;
+}
+
+.pem-add-input-container.is-hidden {
+    display: none;
+}
+
+@keyframes pem-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.pem-file-row {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 8px;
+}
+
+.pem-file-row.is-pinned {
+    border-color: var(--text-accent);
+    background: var(--background-primary-alt);
+}
+
+/* ═══ Citation Item Styles ═══ */
+.pem-citation-panel-container {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    width: 100%;
+}
+
+.pem-citation-item {
+    padding: 6px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--background-modifier-border);
+    transition: background-color 0.1s ease;
+}
+
+.pem-citation-item:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.pem-citation-type-icon {
+    opacity: 0.6;
+    width: 14px;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.pem-citation-type-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.pem-citation-text {
+    display: inline;
+    vertical-align: middle;
+    font-size: 0.9em;
+}
+
+
+
+.pem-citation-title {
+    color: var(--text-normal);
+    font-weight: 400;
+}
+
+.pem-citation-year {
+    color: var(--text-muted);
+}
+
+.pem-citation-not-found {
+    color: var(--text-error);
+    font-size: 0.9em;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* ═══ Citation Detail View ═══ */
+.pem-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--divider-color);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.pem-popup-citekey {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: var(--text-accent);
+}
+
+.pem-zotero-icon-btn {
+    background: var(--background-modifier-border);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.pem-zotero-icon-btn:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.pem-popup-type {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8em;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.pem-abstract-collapsible {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.pem-popup-abstract {
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: var(--text-normal);
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.pem-popup-abstract.is-collapsed {
+    max-height: 150px;
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+}
+
+.pem-abstract-toggle {
+    margin-top: 8px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 0.8em;
+    cursor: pointer;
+    width: 100%;
+    color: var(--text-muted);
+}
+
+.pem-abstract-toggle:hover {
+    background: var(--background-modifier-hover);
     color: var(--text-normal);
 }

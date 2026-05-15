@@ -16,7 +16,7 @@ export function processPopoverContent(
     context?: ProcessingContext
 ): string {
     if (!context) return content;
-    
+
     // Use the centralized registry for processing
     return processContentWithRegistry(content, context);
 }
@@ -60,12 +60,12 @@ function clearCleanupTimeout(state: HoverState): void {
  */
 function removePopover(state: HoverState): void {
     clearCleanupTimeout(state);
-    
+
     if (state.popoverController) {
         state.popoverController.abort();
         state.popoverController = null;
     }
-    
+
     if (state.hoverPopover) {
         state.hoverPopover.remove();
         state.hoverPopover = null;
@@ -103,7 +103,7 @@ function positionPopover(popoverElement: HTMLElement, referenceElement: HTMLElem
     const elementRect = referenceElement.getBoundingClientRect();
     popoverElement.style.left = `${elementRect.left}px`;
     popoverElement.style.top = `${elementRect.bottom + UI_CONSTANTS.HOVER_OFFSET_BOTTOM}px`;
-    
+
     // Adjust if goes off screen
     const popoverRect = popoverElement.getBoundingClientRect();
     if (popoverRect.right > window.innerWidth) {
@@ -118,16 +118,16 @@ function positionPopover(popoverElement: HTMLElement, referenceElement: HTMLElem
  * Attaches hover event listeners to the popover element
  */
 function attachPopoverListeners(
-    popoverElement: HTMLElement, 
+    popoverElement: HTMLElement,
     state: HoverState
 ): void {
     state.popoverController = new AbortController();
-    
+
     popoverElement.addEventListener('mouseenter', () => {
         clearCleanupTimeout(state);
         state.isMouseOverPopover = true;
     }, { signal: state.popoverController.signal });
-    
+
     popoverElement.addEventListener('mouseleave', () => {
         state.isMouseOverPopover = false;
         scheduleRemoval(state);
@@ -138,16 +138,16 @@ function attachPopoverListeners(
  * Attaches hover event listeners to the async popover element
  */
 function attachAsyncPopoverListeners(
-    popoverElement: HTMLElement, 
+    popoverElement: HTMLElement,
     state: AsyncHoverState
 ): void {
     state.popoverController = new AbortController();
-    
+
     popoverElement.addEventListener('mouseenter', () => {
         clearCleanupTimeout(state);
         state.isMouseOverPopover = true;
     }, { signal: state.popoverController.signal });
-    
+
     popoverElement.addEventListener('mouseleave', () => {
         state.isMouseOverPopover = false;
         scheduleAsyncRemoval(state);
@@ -167,51 +167,51 @@ function attachAsyncPopoverListeners(
  * setupSimpleHoverPreview(labelElement, 'Full label text', 'custom-popover-class');
  */
 export function setupSimpleHoverPreview(
-    element: HTMLElement, 
-    fullText: string, 
+    element: HTMLElement,
+    fullText: string,
     popoverClass: string = CSS_CLASSES.HOVER_POPOVER_LABEL,
     abortSignal?: AbortSignal
 ): void {
     const state = createHoverState();
-    
+
     const mouseEnterHandler = () => {
         clearCleanupTimeout(state);
         state.isMouseOverElement = true;
-        
+
         // Remove any existing popover first
         removePopover(state);
-        
+
         const hoverElement = document.createElement(DOM_ATTRIBUTES.ELEMENT_DIV);
         hoverElement.classList.add(CSS_CLASSES.HOVER_POPOVER, popoverClass);
         hoverElement.textContent = fullText;
-        
+
         document.body.appendChild(hoverElement);
         positionPopover(hoverElement, element);
-        
+
         state.hoverPopover = hoverElement;
         attachPopoverListeners(hoverElement, state);
-        
+
         if (abortSignal) {
             abortSignal.addEventListener('abort', () => removePopover(state), { once: true });
         }
     };
-    
+
     const mouseLeaveHandler = () => {
         state.isMouseOverElement = false;
         scheduleRemoval(state);
     };
-    
+
     const clickHandler = () => {
         state.isMouseOverElement = false;
         state.isMouseOverPopover = false;
         removePopover(state);
     };
-    
+
     // Clean up on abort signal
     if (abortSignal) {
         abortSignal.addEventListener('abort', () => removePopover(state), { once: true });
     }
-    
+
     element.addEventListener('mouseenter', mouseEnterHandler, { signal: abortSignal });
     element.addEventListener('mouseleave', mouseLeaveHandler, { signal: abortSignal });
     element.addEventListener('click', clickHandler, { signal: abortSignal });
@@ -241,19 +241,19 @@ function createAsyncHoverState(): AsyncHoverState {
  */
 function removeAsyncPopover(state: AsyncHoverState): void {
     clearCleanupTimeout(state);
-    
+
     // Cancel any in-progress rendering
     if (state.renderAbortController) {
         state.renderAbortController.abort();
         state.renderAbortController = null;
     }
-    
+
     // Clean up popover event listeners
     if (state.popoverController) {
         state.popoverController.abort();
         state.popoverController = null;
     }
-    
+
     // Remove the popover element
     if (state.hoverPopover) {
         state.hoverPopover.remove();
@@ -272,7 +272,7 @@ async function renderPopoverContent(
     context?: ProcessingContext
 ): Promise<void> {
     const processedContent = context ? processContentWithRegistry(content, context) : content;
-    
+
     try {
         await MarkdownRenderer.render(
             app,
@@ -307,71 +307,73 @@ export function setupRenderedHoverPreview(
     abortSignal?: AbortSignal
 ): void {
     const state = createAsyncHoverState();
-    
-    const mouseEnterHandler = async () => {
+    let isHovering = false;
+
+    const showPopover = async () => {
         clearCleanupTimeout(state);
         state.isMouseOverElement = true;
 
-        // Increment generation to track this specific render attempt
         const currentGeneration = ++state.renderingGeneration;
-        
-        // Cancel any previous render in progress and remove existing popover
         removeAsyncPopover(state);
-        
-        // Create abort controller for this render operation
         state.renderAbortController = new AbortController();
-        
+
         const hoverElement = document.createElement(DOM_ATTRIBUTES.ELEMENT_DIV);
         hoverElement.classList.add(CSS_CLASSES.HOVER_POPOVER, popoverClass);
-        
+
         try {
             await renderPopoverContent(hoverElement, content, app, component, context);
         } catch {
-            if (state.renderAbortController?.signal.aborted) {
-                return; // Expected abort, clean up silently
-            }
-            return; // Error already handled in renderPopoverContent
+            if (state.renderAbortController?.signal.aborted) return;
+            return;
         }
-        
-        // Check if this render is still the latest one and mouse is still over
-        if (currentGeneration !== state.renderingGeneration || !state.isMouseOverElement) {
-            return; // A newer render was started or mouse left
-        }
-        
+
+        if (currentGeneration !== state.renderingGeneration || !state.isMouseOverElement) return;
+
         document.body.appendChild(hoverElement);
         positionPopover(hoverElement, element);
-        
-        // Final check before setting the popover as active
+
         if (currentGeneration === state.renderingGeneration && state.isMouseOverElement) {
             state.hoverPopover = hoverElement;
             attachAsyncPopoverListeners(hoverElement, state);
-            
+
             if (abortSignal) {
                 abortSignal.addEventListener('abort', () => removeAsyncPopover(state), { once: true });
             }
         } else {
-            hoverElement.remove(); // Conditions changed while setting up
+            hoverElement.remove();
         }
     };
-    
+
+    // Only show on cmd+hover (mousemove with metaKey)
+    const mouseMoveHandler = (e: MouseEvent) => {
+        if (e.metaKey && !state.hoverPopover && isHovering) {
+            void showPopover();
+        }
+    };
+
+    const mouseEnterHandler = () => {
+        isHovering = true;
+        state.isMouseOverElement = true;
+    };
+
     const mouseLeaveHandler = () => {
+        isHovering = false;
         state.isMouseOverElement = false;
         scheduleAsyncRemoval(state);
     };
-    
+
     const clickHandler = () => {
         state.isMouseOverElement = false;
         state.isMouseOverPopover = false;
         removeAsyncPopover(state);
     };
-    
-    // Clean up on abort signal
+
     if (abortSignal) {
         abortSignal.addEventListener('abort', () => removeAsyncPopover(state), { once: true });
     }
-    
-    const enterListener = () => { void mouseEnterHandler(); };
-    element.addEventListener('mouseenter', enterListener, { signal: abortSignal });
+
+    element.addEventListener('mouseenter', mouseEnterHandler, { signal: abortSignal });
+    element.addEventListener('mousemove', mouseMoveHandler as EventListener, { signal: abortSignal });
     element.addEventListener('mouseleave', mouseLeaveHandler, { signal: abortSignal });
     element.addEventListener('click', clickHandler, { signal: abortSignal });
 }
@@ -390,15 +392,15 @@ export function setupRenderedHoverPreview(
  * positionHoverElement(popoverDiv, triggerButton, '300px', '200px');
  */
 export function positionHoverElement(
-    hoverEl: HTMLElement, 
-    referenceEl: HTMLElement, 
-    maxWidth?: string, 
+    hoverEl: HTMLElement,
+    referenceEl: HTMLElement,
+    maxWidth?: string,
     maxHeight?: string
 ): void {
     const rect = referenceEl.getBoundingClientRect();
     hoverEl.style.left = `${rect.left}px`;
     hoverEl.style.top = `${rect.bottom + UI_CONSTANTS.HOVER_OFFSET_BOTTOM}px`;
-    
+
     if (maxWidth) {
         hoverEl.style.maxWidth = maxWidth;
     }
@@ -406,7 +408,7 @@ export function positionHoverElement(
         hoverEl.style.maxHeight = maxHeight;
     }
     hoverEl.style.overflow = DOM_ATTRIBUTES.OVERFLOW_AUTO;
-    
+
     // Adjust if goes off screen
     const hoverRect = hoverEl.getBoundingClientRect();
     if (hoverRect.right > window.innerWidth) {

@@ -53,7 +53,7 @@ export async function withAsyncErrorBoundary<T>(
  */
 export function handleError(error: unknown, context: string): void {
     // Determine error type and message
-    let message = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let message: string = ERROR_MESSAGES.UNEXPECTED_ERROR;
     let showNotice = true;
     
     if (error instanceof PluginError) {

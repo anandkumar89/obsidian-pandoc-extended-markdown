@@ -1,49 +1,19 @@
 /**
  * Settings and state-related type definitions for the Pandoc Extended Markdown plugin.
  */
-import { PlaceholderContext } from '../utils/placeholderProcessor';
-import {
-    DEFAULT_ORDERED_LIST_MARKER_ORDER,
-    OrderedListMarkerStyle,
-    normalizeOrderedListMarkerOrder
-} from './orderedListTypes';
-import {
-    DEFAULT_UNORDERED_LIST_MARKER_ORDER,
-    UnorderedListMarker,
-    normalizeUnorderedListMarkerOrder
-} from './unorderedListTypes';
 import { FencedDivReference } from './fencedDivTypes';
 
-/**
- * View modes supported by the plugin
- */
 export type ViewMode = "reading" | "live" | "source";
 
-/**
- * Document-specific counters and data
- */
 export interface DocumentCounters {
-    exampleCounter: number;
-    exampleMap: Map<string, number>;      // Maps example labels to numbers
-    exampleContent: Map<string, string>;   // Maps example labels to content
-    hashCounter: number;                   // Counter for hash auto-numbering lists
-    placeholderContext: PlaceholderContext; // Context for placeholder auto-numbering
-    customLabels?: Map<string, string>;   // Maps processed custom labels to content
-    rawToProcessed?: Map<string, string>; // Maps raw labels to processed labels
     fencedDivLabels: Map<string, FencedDivReference>; // Maps fenced div ids to display metadata
 }
 
-/**
- * View state tracking per leaf
- */
 export interface ViewState {
     mode: ViewMode;
     filePath: string | null;
 }
 
-/**
- * Mode change event data
- */
 export interface ModeChangeEvent {
     leafId: string;
     previousMode: ViewMode | null;
@@ -52,64 +22,42 @@ export interface ModeChangeEvent {
     currentPath: string | null;
 }
 
-/**
- * Settings interface for the Pandoc Extended Markdown plugin.
- */
 export interface PandocExtendedMarkdownSettings {
-    strictPandocMode: boolean;
-    autoRenumberLists: boolean;
-    enableHashAutoNumber?: boolean;
-    enableFancyLists?: boolean;
-    enableExampleLists?: boolean;
-    enableDefinitionLists?: boolean;
     enableFencedDivs?: boolean;
-    enableFencedDivExtras?: boolean;
-    enableSuperscript?: boolean;
-    enableSubscript?: boolean;
-    enableCustomLabelLists?: boolean;
-    enableUnorderedListMarkerCycling?: boolean;
-    enableUnorderedListMarkerStyles?: boolean;
-    unorderedListMarkerOrder: UnorderedListMarker[];
-    enableOrderedListMarkerCycling?: boolean;
-    orderedListMarkerOrder: OrderedListMarkerStyle[];
+    enableHeadingNumbering?: boolean;
+    enableCitations?: boolean;
     enableListPanel: boolean;
-    panelOrder: string[];
+    // Pandoc Export Settings
+    pandocPath: string;
+    exportOutputDirectory: string;
+    defaultExportFormat: string;
+    unnumberedClasses: string[];
+    showTOCFileBreaks: boolean;
+    pinnedProjectPath: string | null;
+    pinnedFilePath: string | null;
+    knownProjectPaths: string[];
+    recentFiles: string[];
+    recentProjects: string[];
 }
 
 export const DEFAULT_SETTINGS: PandocExtendedMarkdownSettings = {
-    strictPandocMode: false,
-    autoRenumberLists: true,
-    enableHashAutoNumber: true,
-    enableFancyLists: true,
-    enableExampleLists: true,
-    enableDefinitionLists: true,
     enableFencedDivs: true,
-    enableFencedDivExtras: true,
-    enableSuperscript: true,
-    enableSubscript: true,
-    enableCustomLabelLists: true,
-    enableUnorderedListMarkerCycling: true,
-    enableUnorderedListMarkerStyles: true,
-    unorderedListMarkerOrder: [...DEFAULT_UNORDERED_LIST_MARKER_ORDER],
-    enableOrderedListMarkerCycling: true,
-    orderedListMarkerOrder: [...DEFAULT_ORDERED_LIST_MARKER_ORDER],
+    enableHeadingNumbering: true,
+    enableCitations: true,
     enableListPanel: true,
-    panelOrder: ['custom-labels', 'example-lists', 'definition-lists', 'fenced-divs', 'footnotes']
+    pandocPath: '/usr/local/bin/pandoc',
+    exportOutputDirectory: 'Exports',
+    defaultExportFormat: 'pdf',
+    unnumberedClasses: ['proof'],
+    showTOCFileBreaks: true,
+    pinnedProjectPath: null,
+    pinnedFilePath: null,
+    knownProjectPaths: [],
+    recentFiles: [],
+    recentProjects: []
 };
 
-export type SyntaxFeatureSettingKey =
-    | 'enableHashAutoNumber'
-    | 'enableFancyLists'
-    | 'enableExampleLists'
-    | 'enableDefinitionLists'
-    | 'enableFencedDivs'
-    | 'enableFencedDivExtras'
-    | 'enableSuperscript'
-    | 'enableSubscript'
-    | 'enableCustomLabelLists'
-    | 'enableUnorderedListMarkerCycling'
-    | 'enableUnorderedListMarkerStyles'
-    | 'enableOrderedListMarkerCycling';
+export type SyntaxFeatureSettingKey = 'enableFencedDivs' | 'enableHeadingNumbering' | 'enableCitations';
 
 export function isSyntaxFeatureEnabled(
     settings: Partial<PandocExtendedMarkdownSettings>,
@@ -118,43 +66,24 @@ export function isSyntaxFeatureEnabled(
     return settings[key] ?? DEFAULT_SETTINGS[key] ?? false;
 }
 
-export function isCustomLabelListsEnabled(
-    settings: Partial<PandocExtendedMarkdownSettings>
-): boolean {
-    return isSyntaxFeatureEnabled(settings, 'enableCustomLabelLists');
-}
-
-export function isFencedDivExtrasEnabled(
-    settings: Partial<PandocExtendedMarkdownSettings>
-): boolean {
-    return isSyntaxFeatureEnabled(settings, 'enableFencedDivs') &&
-        isSyntaxFeatureEnabled(settings, 'enableFencedDivExtras');
-}
-
 export function normalizeSettings(
     settings?: Partial<PandocExtendedMarkdownSettings>
 ): PandocExtendedMarkdownSettings {
     const sourceSettings = settings ?? {};
-    const normalized: PandocExtendedMarkdownSettings = {
-        strictPandocMode: sourceSettings.strictPandocMode ?? DEFAULT_SETTINGS.strictPandocMode,
-        autoRenumberLists: sourceSettings.autoRenumberLists ?? DEFAULT_SETTINGS.autoRenumberLists,
-        enableHashAutoNumber: isSyntaxFeatureEnabled(sourceSettings, 'enableHashAutoNumber'),
-        enableFancyLists: isSyntaxFeatureEnabled(sourceSettings, 'enableFancyLists'),
-        enableExampleLists: isSyntaxFeatureEnabled(sourceSettings, 'enableExampleLists'),
-        enableDefinitionLists: isSyntaxFeatureEnabled(sourceSettings, 'enableDefinitionLists'),
+    return {
         enableFencedDivs: isSyntaxFeatureEnabled(sourceSettings, 'enableFencedDivs'),
-        enableFencedDivExtras: isSyntaxFeatureEnabled(sourceSettings, 'enableFencedDivExtras'),
-        enableSuperscript: isSyntaxFeatureEnabled(sourceSettings, 'enableSuperscript'),
-        enableSubscript: isSyntaxFeatureEnabled(sourceSettings, 'enableSubscript'),
-        enableCustomLabelLists: isSyntaxFeatureEnabled(sourceSettings, 'enableCustomLabelLists'),
-        enableUnorderedListMarkerCycling: isSyntaxFeatureEnabled(sourceSettings, 'enableUnorderedListMarkerCycling'),
-        enableUnorderedListMarkerStyles: isSyntaxFeatureEnabled(sourceSettings, 'enableUnorderedListMarkerStyles'),
-        unorderedListMarkerOrder: normalizeUnorderedListMarkerOrder(sourceSettings.unorderedListMarkerOrder),
-        enableOrderedListMarkerCycling: isSyntaxFeatureEnabled(sourceSettings, 'enableOrderedListMarkerCycling'),
-        orderedListMarkerOrder: normalizeOrderedListMarkerOrder(sourceSettings.orderedListMarkerOrder),
+        enableHeadingNumbering: isSyntaxFeatureEnabled(sourceSettings, 'enableHeadingNumbering'),
+        enableCitations: isSyntaxFeatureEnabled(sourceSettings, 'enableCitations'),
         enableListPanel: sourceSettings.enableListPanel ?? DEFAULT_SETTINGS.enableListPanel,
-        panelOrder: sourceSettings.panelOrder ?? [...DEFAULT_SETTINGS.panelOrder]
+        pandocPath: sourceSettings.pandocPath ?? DEFAULT_SETTINGS.pandocPath,
+        exportOutputDirectory: sourceSettings.exportOutputDirectory ?? DEFAULT_SETTINGS.exportOutputDirectory,
+        defaultExportFormat: sourceSettings.defaultExportFormat ?? DEFAULT_SETTINGS.defaultExportFormat,
+        unnumberedClasses: sourceSettings.unnumberedClasses ?? [...DEFAULT_SETTINGS.unnumberedClasses],
+        showTOCFileBreaks: sourceSettings.showTOCFileBreaks ?? DEFAULT_SETTINGS.showTOCFileBreaks,
+        pinnedProjectPath: sourceSettings.pinnedProjectPath ?? DEFAULT_SETTINGS.pinnedProjectPath,
+        pinnedFilePath: sourceSettings.pinnedFilePath ?? DEFAULT_SETTINGS.pinnedFilePath,
+        knownProjectPaths: sourceSettings.knownProjectPaths ?? [...DEFAULT_SETTINGS.knownProjectPaths],
+        recentFiles: sourceSettings.recentFiles ?? [...DEFAULT_SETTINGS.recentFiles],
+        recentProjects: sourceSettings.recentProjects ?? [...DEFAULT_SETTINGS.recentProjects]
     };
-
-    return normalized;
 }

@@ -1,4 +1,3 @@
-import { ListPatterns } from '../patterns';
 import { FencedDivReference } from '../types/fencedDivTypes';
 
 const PANDOC_CITATION_REFERENCE = /@([^\s,;)\]}]+)/g;
@@ -8,48 +7,21 @@ const TRAILING_REFERENCE_PUNCTUATION = /[.!?]+$/;
  * Context for content processing containing all necessary data
  */
 export interface ProcessingContext {
-    exampleLabels?: Map<string, number>;
-    exampleContent?: Map<string, string>;
-    customLabels?: Map<string, string>;
-    rawToProcessed?: Map<string, string>;
     fencedDivLabels?: Map<string, FencedDivReference>;
     footnotes?: Map<string, string>; // For footnote processor example
-    // Add more specific context fields as needed for new processors
+    fencedDivStack?: any[];
+    fencedDivBoundaryLine?: number;
+    fencedDivCanOpenAtCurrentLine?: boolean;
+    equationLabels?: Map<string, any>;
 }
 
 /**
  * Interface for content processors that transform text
  */
 export interface ContentProcessor {
-    /**
-     * Unique identifier for this processor
-     */
     id: string;
-    
-    /**
-     * Process content using the provided context
-     * @param content The content to process
-     * @param context The processing context
-     * @returns The processed content
-     */
     process(content: string, context: ProcessingContext): string;
 }
-
-export const fencedDivReferenceContentProcessor: ContentProcessor = {
-    id: 'fenced-div-references',
-    process: (content: string, context: ProcessingContext): string => {
-        if (!context.fencedDivLabels) return content;
-
-        return content.replace(
-            PANDOC_CITATION_REFERENCE,
-            (match: string, rawLabel: string) => {
-                const label = resolveFencedDivLabel(rawLabel, context.fencedDivLabels!);
-                const reference = label ? context.fencedDivLabels!.get(label) : undefined;
-                return reference ? reference.referenceText : match;
-            }
-        );
-    }
-};
 
 /**
  * Registry for content processors that can be extended with new processors
@@ -59,13 +31,9 @@ export class ContentProcessorRegistry {
     private processors: Map<string, ContentProcessor> = new Map();
     
     private constructor() {
-        // Initialize with default processors
         this.registerDefaultProcessors();
     }
     
-    /**
-     * Get the singleton instance
-     */
     static getInstance(): ContentProcessorRegistry {
         if (!ContentProcessorRegistry.instance) {
             ContentProcessorRegistry.instance = new ContentProcessorRegistry();
@@ -73,97 +41,50 @@ export class ContentProcessorRegistry {
         return ContentProcessorRegistry.instance;
     }
     
-    /**
-     * Register a content processor with the registry
-     * @param processor The processor to register
-     */
     registerProcessor(processor: ContentProcessor): void {
         this.processors.set(processor.id, processor);
     }
     
-    /**
-     * Unregister a content processor from the registry
-     * @param id The unique identifier of the processor to remove
-     */
     unregisterProcessor(id: string): void {
         this.processors.delete(id);
     }
     
-    /**
-     * Process content through all registered processors in sequence
-     * @param content The content to process
-     * @param context The processing context containing data for processors
-     * @returns The processed content with all transformations applied
-     */
     processContent(content: string, context: ProcessingContext): string {
         let processedContent = content;
-        
-        // Apply each processor in sequence
         for (const processor of this.processors.values()) {
             processedContent = processor.process(processedContent, context);
         }
-        
         return processedContent;
     }
     
-    /**
-     * Register the default built-in processors
-     */
     private registerDefaultProcessors(): void {
-        // Example reference processor
         this.registerProcessor({
-            id: 'example-references',
+            id: 'fenced-div-references',
             process: (content: string, context: ProcessingContext): string => {
-                if (!context.exampleLabels) return content;
-                
-                return content.replace(
-                    ListPatterns.EXAMPLE_REFERENCE,
-                    (match: string, label: string) => {
-                        const number = context.exampleLabels!.get(label);
-                        return number !== undefined ? `(${number})` : match;
-                    }
-                );
-            }
-        });
-        
-        // Custom label reference processor
-        this.registerProcessor({
-            id: 'custom-label-references',
-            process: (content: string, context: ProcessingContext): string => {
-                if (!context.rawToProcessed) return content;
-                
-                return content.replace(
-                    ListPatterns.CUSTOM_LABEL_REFERENCE,
-                    (match: string, label: string) => {
-                        const processed = context.rawToProcessed!.get(label);
-                        return processed !== undefined ? processed : match;
-                    }
-                );
-            }
-        });
+                if (!context.fencedDivLabels) return content;
 
-        this.registerProcessor(fencedDivReferenceContentProcessor);
+                return content.replace(
+                    PANDOC_CITATION_REFERENCE,
+                    (match: string, rawLabel: string) => {
+                        const label = resolveFencedDivLabel(rawLabel, context.fencedDivLabels!);
+                        const reference = label ? context.fencedDivLabels!.get(label) : undefined;
+                        return reference ? reference.displayName : match;
+                    }
+                );
+            }
+        });
     }
     
-    /**
-     * Clear all processors (useful for testing)
-     */
     clearProcessors(): void {
         this.processors.clear();
     }
     
-    /**
-     * Reset to default processors
-     */
     reset(): void {
         this.clearProcessors();
         this.registerDefaultProcessors();
     }
 }
 
-/**
- * Convenience function to process content using the global registry
- */
 export function processContent(content: string, context: ProcessingContext): string {
     return ContentProcessorRegistry.getInstance().processContent(content, context);
 }
@@ -172,9 +93,7 @@ function resolveFencedDivLabel(
     rawLabel: string,
     labels: Map<string, FencedDivReference>
 ): string | undefined {
-    if (labels.has(rawLabel)) {
-        return rawLabel;
-    }
+    if (labels.has(rawLabel)) return rawLabel;
 
     const trimmedLabel = rawLabel.replace(TRAILING_REFERENCE_PUNCTUATION, '');
     if (trimmedLabel !== rawLabel && labels.has(trimmedLabel)) {

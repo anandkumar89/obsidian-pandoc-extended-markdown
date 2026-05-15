@@ -12,8 +12,7 @@ export class FencedDivReferenceInlineProcessor implements InlineTextProcessor {
     priority = 315;
 
     isEnabled(context: ReadingModeContext): boolean {
-        return context.config.enableFencedDivs !== false &&
-            context.config.enableFencedDivExtras !== false;
+        return context.config.enableFencedDivs !== false;
     }
 
     findMatches(text: string, _node: Text, context: ReadingModeContext): InlineTextMatch[] {
@@ -45,7 +44,7 @@ export class FencedDivReferenceInlineProcessor implements InlineTextProcessor {
         const span = document.createElement('span');
         span.className = CSS_CLASSES.FENCED_DIV_REFERENCE;
         span.dataset.pandocDivRef = label;
-        span.textContent = reference?.referenceText || 'Div';
+        span.textContent = reference?.displayName || 'Div';
 
         if (reference?.content) {
             setTooltip(span, reference.content, { delay: DECORATION_STYLES.TOOLTIP_DELAY_MS });

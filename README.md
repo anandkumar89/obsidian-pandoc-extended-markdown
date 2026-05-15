@@ -1,129 +1,186 @@
-# Pandoc Extended Markdown
+# Academic Pandoc Markdown Plugin for Obsidian
 
-Pandoc Extended Markdown is an Obsidian plugin that makes common [Pandoc Markdown extensions](https://pandoc.org/MANUAL.html#pandocs-markdown) readable in Live Preview and Reading mode while preserving the original Markdown source.
+An Obsidian plugin tailored for academic writing. It renders specific [Pandoc extended markdown syntax](https://pandoc.org/MANUAL.html#pandocs-markdown) in Live Preview and Reading mode, and provides robust TeX and HTML export capabilities. Supports fenced divs with cross-file referencing, equation labelling, figure referencing, heading numbering, a modular sidebar panel with Table of Contents, and direct Pandoc exports.
 
-It focuses on syntax that is useful while writing notes: fancy lists, definition lists, example lists, fenced divs, custom label lists, superscripts, subscripts, list editing helpers, and an optional sidebar panel for navigating structured list-like content.
+## Features
 
-## Highlights
 
-| Feature | Example | What it does |
-| --- | --- | --- |
-| Superscript and subscript | `2^10^`, `H~2~O` | Renders Pandoc-style inline super/subscripts. |
-| Fancy lists | `A.`, `a)`, `iv.`, `#.` | Renders alphabetic, Roman numeral, and hash auto-numbered lists. |
-| Unordered list markers | `-`, `+`, `*` | Keeps `-` as the default round marker, renders `+` as a square, and renders `*` as a hollow round marker. |
-| Definition lists | `Term` followed by `: definition` | Renders Pandoc definition lists in Live Preview and Reading mode. |
-| Example lists | `(@label) Example` and `(@label)` | Numbers examples and resolves local example references. |
-| Fenced divs | `::: {.theorem #thm title="Theorem &"}` | Renders Pandoc fenced divs with optional titles, numbering, and local `@id` references. |
-| Custom label lists | `{::P} Premise` | Adds custom labels, references, and placeholder numbering. |
-| List editing helpers | Enter, Tab, Shift+Tab | Continues lists, cycles marker styles by depth, and can renumber affected list items. |
-| List panel | Command: `Open list panel` | Shows custom labels, examples, definition lists, fenced divs, and footnotes from the active note. |
-
-## Quick Start
-
-Paste this into a note and switch to Live Preview.
-
+### Fenced Divs and Block Referencing
 ```markdown
-Water is H~2~O, and 2^10^ is 1024.
-
-A.  First point
-B.  Second point
-    a. Third point
-    b. Fourth point
-
-#. Auto-numbering list
-#. Auto-numbering list
-
-- Default round unordered marker
-	+ Square unordered marker
-		* Hollow round unordered marker
-
-Term
-:   A definition list item.
-
-(@) This is a numbered example.
-(@intro) This is a citable numbered example
-
-{::P} A custom-labeled premise.
-{::Q(#step)} A custom label with placeholder numbering.
-
-See example (@intro), premise {::P}, and step {::Q(#step)}.
-
-::: {.theorem #compact title="Theorem &"}
+::: {.theorem #thm:main title="Main Result"}
 Every compact metric space is complete.
 :::
 
-::: theorem &.& #thm2
-This is a sub theorem, using shortcut syntax
+See @thm:main for the proof.
+```
+- Opening fence renders as **Theorem 1 (Main Result)**
+- `@thm:main` renders as the numbered display name (e.g., **Theorem 1**)
+- Cross-file referencing within [Longform](https://github.com/kevboh/longform) projects
+- Global sequential numbering per class (Theorem 1, Definition 1, Definition 2, …)
+- Fuzzy-matching suggester appears when typing `@`
+
+### Equation Labelling and Referencing
+```markdown
+$$
+E = mc^2 % #eq:einstein
+$$
+
+See @eq:einstein.
+```
+- Display-math blocks with `% #eq:label` are extracted and indexed
+- `@eq:label` renders as `(eq:label)` in Live Preview
+- Cross-file referencing and global numbering in Longform projects
+
+### Figure Referencing
+```markdown
+![[plot.png|fig:main-result|desc:Convergence rates]]
+![fig:comparison|desc:Before and after](images/compare.png)
+
+See @fig:main-result and @fig:comparison.
+```
+- Wiki-link and standard markdown image syntax both supported
+- `@fig:label` renders as **Figure N** in Live Preview
+- Sequential numbering, cross-file support, and suggester integration
+
+### Longform Project Integration
+
+Full compatibility with the [Longform plugin](https://github.com/kevboh/longform) for multi-file writing projects:
+
+- **Automatic project detection**: scans parent directories for `Index.md` with `longform` frontmatter
+- **Cross-file referencing**: `@label`, `@eq:label`, and `@fig:label` resolve across all scenes
+- **Global numbering**: blocks, equations, figures, and sections numbered sequentially across scenes in index order
+- **Persistent caching**: `.pem-cache.json` stores indices per project; survives Obsidian restarts
+- **Force reload**: sidebar button to rebuild all caches when numbering is stale
+
+### Sidebar Panel
+
+A modular sidebar with tab-based navigation:
+
+| Tab | Icon | Content |
+|-----|------|---------|
+| **Table of Contents** | `§` | Hierarchical numbered headings (H1–H5); click to navigate; shows project indicator for Longform |
+| **Fenced Divs** | `:::` | All labelled blocks with title, number, label, and content preview |
+| **Equations** | `$$` | All tagged equations with rendered math preview |
+| **Figures** | `📷` | All labeled figures |
+| **Export** | `⤓` | Direct TeX/HTML Pandoc export configuration |
+
+**Controls:**
+- Toggle buttons (👁 preview, 📁 project scope) in top bar, right-aligned
+- Force reload button `↻` for cache rebuild
+- Click any entry to navigate to its location
+- Click labels to copy reference syntax to clipboard
+- Cmd+hover for rendered preview popover
+
+### Native Pandoc TeX / HTML Export
+Export your files or Longform projects cleanly and accurately directly to your `~/Downloads` folder.
+- Converts fenced divs into proper LaTeX environments (e.g., `\begin{theorem} ... \end{theorem}`).
+- Maps Markdown `######` (H6) directly into paragraphs.
+- Combines Longform scenes automatically (stripping redundant frontmatter).
+- Ensures correct LaTeX references via native `\label{}` mapping.
+
+## Installation
+
+### From Obsidian Community Plugins
+1. Open Settings → Community plugins
+2. Search for "Academic Pandoc Markdown"
+3. Click Install and Enable
+
+### Manual Installation
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release
+2. Create `academic-pandoc-markdown` in `.obsidian/plugins/`
+3. Copy the downloaded files into the folder
+4. Reload Obsidian and enable the plugin
+
+## Usage Examples
+
+### Fenced Divs with Cross-References
+```markdown
+::: {.definition #def:compact title="Compactness"}
+A topological space is compact if every open cover has a finite subcover.
 :::
 
-See @compact and @thm2
+::: {.theorem #thm:heine-borel}
+A subset of $\mathbb{R}^n$ is compact iff it is closed and bounded.
+:::
+
+By @def:compact and @thm:heine-borel, the unit ball is compact.
+```
+
+### Equations with Labels
+```markdown
+$$
+\nabla \cdot \mathbf{E} = \frac{\rho}{\epsilon_0} % #eq:gauss
+$$
+
+Gauss's law (@eq:gauss) relates charge density to electric field divergence.
+```
+
+### Figures
+```markdown
+![[results.png|fig:convergence|desc:Convergence analysis|title:Main Result]]
+
+As shown in @fig:convergence, the algorithm converges in $O(n \log n)$.
+```
 
 ```
 
-Preview:
+## Settings
 
-![Rendering preview](docs/assets/rendering-preview.png)
+| Category | Setting | Description |
+|----------|---------|-------------|
+| **Syntax Features** | Fenced divs | Enable `:::` blocks and `@label` references |
+| | Heading numbering | Enable hierarchical numbering of headings |
+| **Pandoc Export** | Pandoc Path | Absolute path to your pandoc executable |
+| | Default Output Format | Preferred export type (TeX, HTML, PDF, etc.) |
+| **Panel Features** | Enable list panel | Toggle sidebar panel and ribbon icon |
+| | Panel tab order | Drag to reorder panel tabs |
 
-## Documentation
+## Commands
 
-Start here if you want more than the quick start:
-
-- [Documentation index](docs/README.md)
-- [Syntax reference](docs/syntax-reference.md)
-- [Customizing CSS](docs/customizing-css.md)
-- [Fenced divs](docs/fenced-divs.md)
-- [List panel](docs/list-panel.md)
-- [Pandoc export](docs/pandoc-export.md)
-- [Development](docs/development.md)
-- [Architecture](docs/architecture.md)
-
-## Modes And Settings
-
-- Live Preview is the main editing surface.
-- Reading mode renders the implemented syntax after Obsidian has produced its HTML.
-- Source mode preserves plain Markdown.
-- Strict Pandoc mode disables custom label lists completely, disables extended fenced div syntax, and applies stricter Pandoc list spacing rules.
-
-The plugin settings let you enable or disable individual syntax families, list marker cycling, auto-renumbering, distinct unordered-list marker rendering, and the sidebar list panel.
-
-## Pandoc Export
-
-For exporting from inside Obsidian, consider using [Obsidian Enhancing Export](https://github.com/mokeyish/obsidian-enhancing-export), a Pandoc-based export plugin for formats such as Markdown, HTML, docx, and LaTeX.
-
-Obsidian rendering does not automatically change Pandoc CLI output. For plugin-specific export behavior, use the bundled Lua filters:
-
-```bash
-pandoc input.md --lua-filter=lua_filter/FencedDivExtendedSyntax.lua -o output.docx
-pandoc input.md --lua-filter=lua_filter/CustomLabelList.lua -o output.docx
-```
-
-See [Pandoc export](docs/pandoc-export.md) for details.
+| Command | Description |
+|---------|-------------|
+| Export to Pandoc | Initiates export of the active document/project |
 
 ## Development
 
+### Building from Source
 ```bash
+git clone https://github.com/ErrorTzy/obsidian-pandoc-extended-markdown
+cd obsidian-pandoc-extended-markdown
 npm install
-npm run dev
-npm run build
-npm run lint
-npm test
+npm run build        # Production build
+npm run dev          # Dev mode with watch
+npm test             # Unit/integration tests
+npm run test:e2e     # E2E tests (WebdriverIO)
+npm run lint         # ESLint
 ```
 
-See [Development](docs/development.md) and [tests/README.md](tests/README.md) for repository layout and test guidance.
+### Deploying Locally
+```bash
+cp main.js manifest.json styles.css \
+  ~/path-to-vault/.obsidian/plugins/academic-pandoc-markdown/
+```
+Then reload Obsidian (Cmd+R or disable/re-enable the plugin).
 
-## Requirements
+### Architecture
 
-- Obsidian 1.4.0 or newer.
-- Desktop and mobile are supported.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation including the processing pipeline, state management, and extension guide.
 
-## Support
+### Agent Guidelines
 
-Report bugs and feature requests in [GitHub Issues](https://github.com/ErrorTzy/obsidian-pandoc-extended-markdown/issues).
+See [AGENTS.md](AGENTS.md) for coding conventions, naming rules, and guidelines for LLM coding agents working on this codebase.
+
+## Compatibility
+
+- Requires Obsidian v1.4.0 or higher
+- Works on desktop and mobile
+- Compatible with the Longform plugin for multi-file projects
+- Compatible with other Obsidian plugins
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT License — see [LICENSE](LICENSE)
 
-## Author
+## Acknowledgments
 
-Created by [Scott Tang](https://github.com/ErrorTzy).
+Built with Claude Code and Google Gemini. Maintained by Anand Kumar.

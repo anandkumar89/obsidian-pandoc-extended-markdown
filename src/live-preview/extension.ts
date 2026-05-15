@@ -6,8 +6,8 @@ import { pluginStateManager } from '../core/state/pluginStateManager';
 
 // Pipeline imports
 import { ProcessingPipeline } from './pipeline/ProcessingPipeline';
-import { HashListProcessor, FancyListProcessor, ExampleListProcessor, CustomLabelProcessor, DefinitionProcessor, FencedDivProcessor, StandardListProcessor, ListContinuationProcessor } from './pipeline/structural';
-import { ExampleReferenceProcessor, SuperscriptProcessor, SubscriptProcessor, CustomLabelReferenceProcessor, FencedDivReferenceProcessor } from './pipeline/inline';
+import { FencedDivProcessor, HeadingProcessor } from './pipeline/structural';
+import { FencedDivReferenceProcessor } from './pipeline/inline';
 
 // Main view plugin for rendering Pandoc extended markdown
 const pandocExtendedMarkdownPlugin = (
@@ -31,24 +31,11 @@ const pandocExtendedMarkdownPlugin = (
             this.pipeline = new ProcessingPipeline(pluginStateManager, app, component);
             
             // Register structural processors
-            this.pipeline.registerStructuralProcessor(new HashListProcessor());
-            this.pipeline.registerStructuralProcessor(new FancyListProcessor());
             this.pipeline.registerStructuralProcessor(new FencedDivProcessor());
-            // StandardListProcessor only adds source-marker classes; Obsidian keeps
-            // ownership of native unordered list rendering and editing behavior.
-            this.pipeline.registerStructuralProcessor(new StandardListProcessor());
-            this.pipeline.registerStructuralProcessor(new ExampleListProcessor());
-            this.pipeline.registerStructuralProcessor(new CustomLabelProcessor());
-            this.pipeline.registerStructuralProcessor(new DefinitionProcessor());
-            // ListContinuationProcessor must be registered last to run after all list processors
-            this.pipeline.registerStructuralProcessor(new ListContinuationProcessor());
+            this.pipeline.registerStructuralProcessor(new HeadingProcessor());
             
             // Register inline processors
-            this.pipeline.registerInlineProcessor(new ExampleReferenceProcessor());
             this.pipeline.registerInlineProcessor(new FencedDivReferenceProcessor());
-            this.pipeline.registerInlineProcessor(new SuperscriptProcessor());
-            this.pipeline.registerInlineProcessor(new SubscriptProcessor());
-            this.pipeline.registerInlineProcessor(new CustomLabelReferenceProcessor());
         }
 
         update(update: ViewUpdate) {

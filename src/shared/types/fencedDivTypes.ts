@@ -6,23 +6,16 @@ export interface FencedDivAttributes {
     id?: string;
     classes: string[];
     keyValues: Map<string, string>;
+    inlineTitle?: string;
 }
 
 export interface FencedDivReference {
     label: string;
-    title: string;
-    titleTemplate?: string;
     displayName: string;
-    typeLabel: string;
-    typeKey: string;
-    number: number;
-    numberParts?: number[];
-    numberingEnabled?: boolean;
-    referenceText: string;
-    blockTitleText: string;
     lineNumber: number;
     classes: string[];
     content: string;
+    inlineTitle?: string;
 }
 
 export interface FencedDivSuggestion {
@@ -37,4 +30,6 @@ export interface FencedDivStackItem {
     classes: string[];
     openingLine: number;
     displayName?: string;
+    inlineTitle?: string;
+    openingFence: string;
 }

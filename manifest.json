@@ -1,10 +1,10 @@
 {
-	"id": "pandoc-extended-markdown",
-	"name": "Pandoc Extended Markdown",
-	"version": "1.7.8",
+	"id": "academic-pandoc-markdown",
+	"name": "Academic Pandoc Markdown",
+	"version": "1.7.2",
 	"minAppVersion": "1.4.0",
-	"description": "Render Pandoc extended markdown syntax: fancy lists, definition lists, example lists with cross-references, superscripts, and subscripts.",
-	"author": "ErrorTzy",
+	"description": "Professional Pandoc extended markdown suite: fancy lists, definition lists, example lists with cross-references, superscripts, subscripts, and advanced TeX export.",
+	"author": "Anand Kumar",
 	"authorUrl": "https://github.com/ErrorTzy",
 	"isDesktopOnly": false
 }

@@ -1,7 +1,5 @@
 import {
     PandocExtendedMarkdownSettings,
-    isFencedDivExtrasEnabled,
-    isCustomLabelListsEnabled,
     isSyntaxFeatureEnabled
 } from './settingsTypes';
 
@@ -20,17 +18,7 @@ export interface ProcessorConfig {
     strictPandocMode: boolean;
     
     // Optional features
-    enableHashLists?: boolean;
-    enableFancyLists?: boolean;
-    enableExampleLists?: boolean;
-    enableDefinitionLists?: boolean;
     enableFencedDivs?: boolean;
-    enableFencedDivExtras?: boolean;
-    enableSuperSubscripts?: boolean;
-    enableSuperscript?: boolean;
-    enableSubscript?: boolean;
-    enableCustomLabelLists?: boolean;
-    enableUnorderedListMarkerStyles?: boolean;
 }
 
 /**
@@ -43,17 +31,6 @@ export function createProcessorConfig(
     return {
         strictLineBreaks: vaultConfig.strictLineBreaks ?? false,
         strictPandocMode: pluginSettings.strictPandocMode ?? false,
-        enableHashLists: isSyntaxFeatureEnabled(pluginSettings, 'enableHashAutoNumber'),
-        enableFancyLists: isSyntaxFeatureEnabled(pluginSettings, 'enableFancyLists'),
-        enableExampleLists: isSyntaxFeatureEnabled(pluginSettings, 'enableExampleLists'),
-        enableDefinitionLists: isSyntaxFeatureEnabled(pluginSettings, 'enableDefinitionLists'),
-        enableFencedDivs: isSyntaxFeatureEnabled(pluginSettings, 'enableFencedDivs'),
-        enableFencedDivExtras: isFencedDivExtrasEnabled(pluginSettings),
-        enableSuperSubscripts: isSyntaxFeatureEnabled(pluginSettings, 'enableSuperscript')
-            || isSyntaxFeatureEnabled(pluginSettings, 'enableSubscript'),
-        enableSuperscript: isSyntaxFeatureEnabled(pluginSettings, 'enableSuperscript'),
-        enableSubscript: isSyntaxFeatureEnabled(pluginSettings, 'enableSubscript'),
-        enableCustomLabelLists: isCustomLabelListsEnabled(pluginSettings),
-        enableUnorderedListMarkerStyles: isSyntaxFeatureEnabled(pluginSettings, 'enableUnorderedListMarkerStyles')
+        enableFencedDivs: isSyntaxFeatureEnabled(pluginSettings, 'enableFencedDivs')
     };
 }

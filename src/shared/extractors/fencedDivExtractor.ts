@@ -1,13 +1,11 @@
 import { Text } from '@codemirror/state';
 
 import { PandocExtendedMarkdownSettings } from '../../core/settings';
-import {
-    isFencedDivExtrasEnabled,
-    isSyntaxFeatureEnabled
-} from '../types/settingsTypes';
+import { isSyntaxFeatureEnabled } from '../types/settingsTypes';
 import { CodeRegion } from '../types/codeTypes';
 import {
     allowsFencedDivOpeningAfterLine,
+    getFencedDivDisplayName,
     isFencedDivClosing,
     parseFencedDivOpening
 } from '../../live-preview/pipeline/structural/fencedDiv/parser';
@@ -16,33 +14,24 @@ import {
     isLineInCodeRegion,
     isMarkdownCodeFenceClosing
 } from '../../live-preview/pipeline/utils/codeDetection';
-import {
-    FencedDivTypeCounters,
-    createFencedDivReferenceMetadata,
-    getFencedDivTitle
-} from '../utils/fencedDivReferenceMetadata';
 
 export interface FencedDivPanelItem {
     title: string;
     label: string;
     content: string;
     classes: string[];
-    typeLabel: string;
-    typeKey: string;
-    number: number;
-    numberParts: number[];
-    numberingEnabled: boolean;
-    referenceText: string;
-    blockTitleText: string;
     lineNumber: number;
     contentLineNumber: number;
     position: { line: number; ch: number };
     contentPosition: { line: number; ch: number };
+    filePath?: string;
+    inlineTitle?: string;
 }
 
 interface ActiveFencedDiv extends FencedDivPanelItem {
     contentLines: string[];
     firstContentLineNumber?: number;
+    openingFence: string;
 }
 
 export function extractFencedDivs(
@@ -65,8 +54,6 @@ export function extractFencedDivsFromDoc(
     const stack: ActiveFencedDiv[] = [];
     let canOpenAtCurrentLine = true;
     let fallbackCodeFenceMarker: string | undefined;
-    const typeCounters: FencedDivTypeCounters = new Map();
-    const includeExtras = isFencedDivExtrasEnabled(settings);
 
     for (let lineNum = 1; lineNum <= doc.lines; lineNum++) {
         const line = doc.line(lineNum);
@@ -94,33 +81,21 @@ export function extractFencedDivsFromDoc(
         }
 
         const opening = canOpenAtCurrentLine
-            ? parseFencedDivOpening(line.text, settings)
+            ? parseFencedDivOpening(line.text)
             : null;
 
         if (opening) {
-            const title = includeExtras ? getFencedDivTitle(opening) : '';
-            const metadata = createFencedDivReferenceMetadata(
-                title,
-                includeExtras ? opening.classes : [],
-                typeCounters
-            );
             const activeDiv: ActiveFencedDiv = {
-                title: metadata.title,
+                title: opening.classes.length > 0 ? getFencedDivDisplayName(opening.classes) : '',
                 label: opening.id || '',
                 content: '',
                 classes: opening.classes,
-                typeLabel: metadata.typeLabel,
-                typeKey: metadata.typeKey,
-                number: metadata.number,
-                numberParts: metadata.numberParts,
-                numberingEnabled: metadata.numberingEnabled,
-                referenceText: metadata.referenceText,
-                blockTitleText: metadata.blockTitleText,
                 lineNumber: lineNum - 1,
                 contentLineNumber: lineNum - 1,
                 position: { line: lineNum - 1, ch: 0 },
                 contentPosition: { line: lineNum - 1, ch: 0 },
-                contentLines: []
+                contentLines: [],
+                openingFence: opening.fence
             };
 
             items.push(activeDiv);
@@ -129,10 +104,14 @@ export function extractFencedDivsFromDoc(
             continue;
         }
 
-        if (isFencedDivClosing(line.text) && stack.length > 0) {
-            closeActiveDiv(stack.pop());
-            canOpenAtCurrentLine = true;
-            continue;
+        const closingFence = isFencedDivClosing(line.text);
+        if (closingFence && stack.length > 0) {
+            const topDiv = stack[stack.length - 1];
+            if (closingFence.length >= topDiv.openingFence.length) {
+                closeActiveDiv(stack.pop());
+                canOpenAtCurrentLine = true;
+                continue;
+            }
         }
 
         for (const activeDiv of stack) {

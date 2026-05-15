@@ -3,7 +3,7 @@ import { EditorState, EditorSelection } from '@codemirror/state';
 import { FencedDivProcessor } from '../../../../src/live-preview/pipeline/structural/FencedDivProcessor';
 import { ProcessingContext } from '../../../../src/live-preview/pipeline/types';
 import { PandocExtendedMarkdownSettings } from '../../../../src/core/settings';
-import { PlaceholderContext } from '../../../../src/shared/utils/placeholderProcessor';
+
 
 describe('FencedDivProcessor', () => {
     let processor: FencedDivProcessor;
@@ -31,49 +31,15 @@ describe('FencedDivProcessor', () => {
                 enableFencedDivs: true,
                 ...settings
             } as PandocExtendedMarkdownSettings,
-            exampleLabels: new Map(),
-            exampleContent: new Map(),
-            exampleLineNumbers: new Map(),
-            duplicateExampleLabels: new Map(),
-            duplicateExampleContent: new Map(),
-            customLabels: new Map(),
-            rawToProcessed: new Map(),
-            duplicateCustomLabels: new Set(),
-            placeholderContext: new PlaceholderContext(),
-            invalidLines: new Set(),
             contentRegions: [],
             structuralDecorations: [],
             inlineDecorations: [],
-            hashCounter: { value: 1 },
-            definitionState: {
-                lastWasItem: false,
-                pendingBlankLine: false
-            },
             fencedDivLabels: new Map([
                 ['thm:label', {
                     label: 'thm:label',
-                    title: '',
                     displayName: 'Theorem',
-                    typeLabel: 'Theorem',
-                    typeKey: 'theorem',
-                    number: 0,
-                    referenceText: 'Theorem',
-                    blockTitleText: 'Theorem',
                     lineNumber: 1,
                     classes: ['theorem'],
-                    content: 'content'
-                }],
-                ['thm', {
-                    label: 'thm',
-                    title: '',
-                    displayName: 'Theorem',
-                    typeLabel: 'Theorem',
-                    typeKey: 'theorem',
-                    number: 0,
-                    referenceText: 'Theorem',
-                    blockTitleText: 'Theorem',
-                    lineNumber: 1,
-                    classes: ['Theorem'],
                     content: 'content'
                 }]
             ]),
@@ -104,19 +70,6 @@ describe('FencedDivProcessor', () => {
             expect(processor.canProcess(context.document.line(1), context)).toBe(true);
         });
 
-        it('recognizes readable shorthand in non-strict mode', () => {
-            const context = createContext('::: Theorem #thm data=1\ncontent\n:::');
-            expect(processor.canProcess(context.document.line(1), context)).toBe(true);
-        });
-
-        it('does not recognize readable shorthand in strict mode', () => {
-            const context = createContext(
-                '::: Theorem #thm data=1\ncontent\n:::',
-                { strictPandocMode: true }
-            );
-            expect(processor.canProcess(context.document.line(1), context)).toBe(false);
-        });
-
         it('does not recognize comma-separated attributes rejected by Pandoc', () => {
             const context = createContext('::: {.theorem, #thm:label}\ncontent\n:::');
             expect(processor.canProcess(context.document.line(1), context)).toBe(false);
@@ -143,55 +96,20 @@ describe('FencedDivProcessor', () => {
 
             expect(result.decorations[0].decoration.spec?.class).toContain('cm-pem-fenced-div-open');
             expect(result.decorations[1].decoration.spec?.widget?.constructor.name).toBe('FencedDivHeaderWidget');
-            expect(headerDom?.classList.contains('pem-fenced-div-title')).toBe(true);
+            expect(headerDom?.querySelector('.pem-fenced-div-title')?.textContent).toBe('Theorem');
             expect(headerDom?.querySelector('.pem-fenced-div-source-handle')).toBeNull();
             expect(headerDom?.textContent).toBe('Theorem');
             expect(context.fencedDivStack).toHaveLength(1);
             expect(context.fencedDivStack?.[0].label).toBe('thm:label');
         });
 
-        it('renders an unbraced fenced div shortcut with class-derived title text', () => {
+        it('renders an unbraced fenced div shortcut label without punctuation', () => {
             const context = createContext('::: Label\nThis is an example\n:::');
             const result = processor.process(context.document.line(1), context);
             const headerDom = result.decorations[1].decoration.spec?.widget?.toDOM();
 
-            expect(headerDom?.classList.contains('pem-fenced-div-title')).toBe(true);
+            expect(headerDom?.querySelector('.pem-fenced-div-title')?.textContent).toBe('Label');
             expect(headerDom?.textContent).toBe('Label');
-        });
-
-        it('renders readable shorthand with a reference label', () => {
-            const context = createContext('::: Theorem #thm data=1\nThis is an example\n:::');
-            const result = processor.process(context.document.line(1), context);
-            const headerDom = result.decorations[1].decoration.spec?.widget?.toDOM();
-
-            expect(headerDom?.classList.contains('pem-fenced-div-title')).toBe(true);
-            expect(headerDom?.dataset.pandocDivId).toBe('thm');
-            expect(headerDom?.textContent).toBe('Theorem');
-            expect(context.fencedDivStack?.[0].label).toBe('thm');
-        });
-
-        it('renders title placeholders with generated number text', () => {
-            const context = createContext('::: {.theorem #thm:label title="Theorem &"}\ncontent\n:::');
-            context.fencedDivLabels = new Map();
-            const result = processor.process(context.document.line(1), context);
-            const headerDom = result.decorations[1].decoration.spec?.widget?.toDOM();
-
-            expect(headerDom?.classList.contains('pem-fenced-div-title')).toBe(true);
-            expect(headerDom?.textContent).toBe('Theorem 1');
-        });
-
-        it('renders the base fenced div block without generated title text when extras are disabled', () => {
-            const context = createContext(
-                '::: {.theorem #thm:label title="Theorem &"}\ncontent\n:::',
-                { enableFencedDivExtras: false }
-            );
-            const result = processor.process(context.document.line(1), context);
-            const headerDom = result.decorations[1].decoration.spec?.widget?.toDOM();
-
-            expect(result.decorations[0].decoration.spec?.class).toContain('cm-pem-fenced-div-open');
-            expect(result.decorations[1].decoration.spec?.widget?.constructor.name).toBe('FencedDivHeaderWidget');
-            expect(headerDom?.textContent).toBe('');
-            expect(context.fencedDivStack?.[0].label).toBe('thm:label');
         });
 
         it('does not replace an opening fence while the cursor is editing it', () => {
@@ -229,20 +147,6 @@ describe('FencedDivProcessor', () => {
             expect(result.decorations[0].decoration.spec?.class).toContain('cm-pem-fenced-div-content');
             expect(result.contentRegion).toBeUndefined();
             expect(result.skipFurtherProcessing).toBe(false);
-        });
-
-        it('adds every semantic fenced div class to decorated lines', () => {
-            const context = createContext('::: {.class1 .class2 #multi}\ncontent\n:::');
-
-            const opening = processor.process(context.document.line(1), context);
-            const content = processor.process(context.document.line(2), context);
-            const closing = processor.process(context.document.line(3), context);
-
-            for (const result of [opening, content, closing]) {
-                const className = result.decorations[0].decoration.spec?.class;
-                expect(className).toContain('cm-pem-fenced-div-class1');
-                expect(className).toContain('cm-pem-fenced-div-class2');
-            }
         });
 
         it('adds nested depth classes to inner fenced div lines', () => {

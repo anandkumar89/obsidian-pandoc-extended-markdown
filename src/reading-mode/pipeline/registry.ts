@@ -1,38 +1,21 @@
 import { pluginStateManager } from '../../core/state/pluginStateManager';
-import { extractFencedDivs } from '../../shared/extractors/fencedDivExtractor';
 
 import { ReadingModePipeline } from './ReadingModePipeline';
-import { CustomLabelReferenceInlineProcessor } from './inline/customLabelReferenceInlineProcessor';
-import { ExampleReferenceInlineProcessor } from './inline/exampleReferenceInlineProcessor';
 import { FencedDivReferenceInlineProcessor } from './inline/fencedDivReferenceInlineProcessor';
-import {
-    SubscriptInlineProcessor,
-    SuperscriptInlineProcessor
-} from './inline/superSubInlineProcessors';
-import { CustomLabelListProcessor } from './processors/customLabelListProcessor';
-import { DefinitionListNormalizationProcessor } from './processors/definitionListNormalizationProcessor';
-import { ExtendedListBlockProcessor } from './processors/extendedListBlockProcessor';
 import { FencedDivBlockProcessor } from './processors/fencedDivBlockProcessor';
+import { HeadingNumberProcessor } from './processors/headingNumberProcessor';
 import { InlineTextEngineProcessor } from './processors/inlineTextProcessor';
-import { UnorderedListMarkerProcessor } from './processors/unorderedListMarkerProcessor';
 import { ReadingModeContext } from './types';
 
 export function createDefaultReadingModePipeline(): ReadingModePipeline {
     const pipeline = new ReadingModePipeline();
     const inlineProcessors = [
-        new ExampleReferenceInlineProcessor(),
-        new FencedDivReferenceInlineProcessor(),
-        new SuperscriptInlineProcessor(),
-        new SubscriptInlineProcessor(),
-        new CustomLabelReferenceInlineProcessor()
+        new FencedDivReferenceInlineProcessor()
     ];
 
-    pipeline.registerProcessor(new UnorderedListMarkerProcessor());
-    pipeline.registerProcessor(new DefinitionListNormalizationProcessor());
     pipeline.registerProcessor(new FencedDivBlockProcessor());
-    pipeline.registerProcessor(new ExtendedListBlockProcessor());
+    pipeline.registerProcessor(new HeadingNumberProcessor());
     pipeline.registerProcessor(new InlineTextEngineProcessor(inlineProcessors));
-    pipeline.registerProcessor(new CustomLabelListProcessor());
 
     return pipeline;
 }
@@ -49,7 +32,6 @@ export function createReadingModeContext(
         (section ? postProcessorContext.getSectionInfo?.(section) : null) ??
         null;
     const counters = pluginStateManager.getDocumentCounters(sourcePath);
-    hydrateFencedDivLabelsFromSource(sectionInfo?.text || '', config, counters.fencedDivLabels);
 
     return {
         element,
@@ -64,46 +46,7 @@ export function createReadingModeContext(
             ? sectionInfo.text.split('\n')
             : [],
         renderContext: {
-            strictLineBreaks: config.strictLineBreaks,
-            getExampleNumber: (label: string) =>
-                pluginStateManager.getLabeledExampleNumber(sourcePath, label),
-            getExampleContent: (label: string) =>
-                pluginStateManager.getLabeledExampleContent(sourcePath, label)
+            strictLineBreaks: config.strictLineBreaks
         }
     };
-}
-
-function hydrateFencedDivLabelsFromSource(
-    source: string,
-    config: ReadingModeContext['config'],
-    labels: ReadingModeContext['counters']['fencedDivLabels']
-): void {
-    if (!source || config.enableFencedDivs === false || config.enableFencedDivExtras === false) {
-        return;
-    }
-
-    const items = extractFencedDivs(source, config);
-
-    for (const item of items) {
-        if (!item.label || labels.has(item.label)) {
-            continue;
-        }
-
-        labels.set(item.label, {
-            label: item.label,
-            title: item.title,
-            titleTemplate: item.title,
-            displayName: item.referenceText,
-            typeLabel: item.typeLabel,
-            typeKey: item.typeKey,
-            number: item.number,
-            numberParts: item.numberParts,
-            numberingEnabled: item.numberingEnabled,
-            referenceText: item.referenceText,
-            blockTitleText: item.blockTitleText,
-            lineNumber: item.lineNumber + 1,
-            classes: item.classes,
-            content: item.content
-        });
-    }
 }

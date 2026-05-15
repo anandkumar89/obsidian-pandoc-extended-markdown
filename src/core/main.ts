@@ -1,5 +1,5 @@
 // External libraries
-import { Plugin, Notice, Editor, MarkdownView, WorkspaceLeaf, addIcon, Component } from 'obsidian';
+import { Plugin, Notice, Editor, MarkdownView, WorkspaceLeaf, addIcon, Component, TFile, TFolder } from 'obsidian';
 import { Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 
@@ -8,7 +8,7 @@ import {
     PandocExtendedMarkdownSettings,
     PandocExtendedMarkdownSettingTab,
     normalizeSettings,
-    isCustomLabelListsEnabled
+    isSyntaxFeatureEnabled
 } from './settings';
 import { createProcessorConfig } from '../shared/types/processorConfig';
 
@@ -21,18 +21,14 @@ import { ListPatterns } from '../shared/patterns';
 // Internal modules
 import { pandocExtendedMarkdownExtension } from '../live-preview/extension';
 import { processReadingMode } from '../reading-mode/processor';
-import { ExampleReferenceSuggest } from '../editor-extensions/suggestions/exampleReferenceSuggest';
-import { CustomLabelReferenceSuggest } from '../editor-extensions/suggestions/customLabelReferenceSuggest';
-import { FencedDivReferenceSuggest } from '../editor-extensions/suggestions/fencedDivReferenceSuggest';
-import { formatToPandocStandard, checkPandocFormatting } from '../editor-extensions/pandocValidator';
-import { createListAutocompletionKeymap } from '../editor-extensions/listAutocompletion';
 import { pluginStateManager } from './state/pluginStateManager';
+import { LongformProjectManager } from './state/longformProjectManager';
 import { ListPanelView, VIEW_TYPE_LIST_PANEL } from '../views/panels/ListPanelView';
+import { CitationDetailView, VIEW_TYPE_CITATION_DETAIL } from '../views/panels/CitationDetailView';
+import { FencedDivReferenceSuggest } from '../editor-extensions/suggestions/fencedDivReferenceSuggest';
+import { PandocExporter } from '../shared/utils/pandocExporter';
 
 export class PandocExtendedMarkdownPlugin extends Plugin {
-    private suggester: ExampleReferenceSuggest;
-    private customLabelSuggester: CustomLabelReferenceSuggest;
-    private fencedDivSuggester: FencedDivReferenceSuggest;
     private listPanelRibbonIcon: HTMLElement | null = null;
     settings: PandocExtendedMarkdownSettings;
 
@@ -45,35 +41,54 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
         // Add settings tab
         this.addSettingTab(new PandocExtendedMarkdownSettingTab(this.app, this));
         
+        // Initialize Longform Project Manager before extensions that depend on it
+        LongformProjectManager.getInstance(this);
+
         // Register all extensions and processors
-        this.registerExtensions();
+        this.setupExtensions();
         this.registerPostProcessor();
         
         // Set up mode change detection
         this.setupModeChangeDetection();
         
-        // Register example reference suggester
-        this.suggester = new ExampleReferenceSuggest(this);
-        this.registerEditorSuggest(this.suggester);
-        
-        // Register custom label reference suggester
-        this.customLabelSuggester = new CustomLabelReferenceSuggest(this);
-        this.registerEditorSuggest(this.customLabelSuggester);
+        // Check for project for the currently active file on startup
+        this.app.workspace.onLayoutReady(async () => {
+            const activeFile = this.app.workspace.getActiveFile();
+            const pm = LongformProjectManager.getInstance(this);
+            
+            if (pm.getPinnedProjectPath()) {
+                const folder = this.app.vault.getAbstractFileByPath(pm.getPinnedProjectPath()!);
+                if (folder instanceof TFolder) await pm.scanProject(folder);
+            } else if (pm.getPinnedFilePath()) {
+                const file = this.app.vault.getAbstractFileByPath(pm.getPinnedFilePath()!);
+                if (file instanceof TFile) await pm.checkAndLoadProjectForFile(file);
+            }
 
-        // Register fenced div citation suggester
-        this.fencedDivSuggester = new FencedDivReferenceSuggest(this);
-        this.registerEditorSuggest(this.fencedDivSuggester);
+            if (activeFile) {
+                void pm.checkAndLoadProjectForFile(activeFile);
+            } else if (pm.getPinnedProjectPath() || pm.getPinnedFilePath()) {
+                const panel = this.getListPanelView();
+                if (panel) void panel.updateView();
+            }
+        });
         
         // Register list panel view
         this.registerView(
             VIEW_TYPE_LIST_PANEL,
             (leaf) => new ListPanelView(leaf, this)
         );
+
+        this.registerView(
+            VIEW_TYPE_CITATION_DETAIL,
+            (leaf) => new CitationDetailView(leaf)
+        );
         
         // Register all commands
         this.registerCommands();
 
         this.updateListPanelAvailability();
+
+
 
         // Apply list panel availability once layout is ready
         this.app.workspace.onLayoutReady(() => {
@@ -86,8 +101,7 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
         addIcon(ICONS.LIST_PANEL_ID, ICONS.LIST_PANEL_SVG);
     }
 
-    private registerExtensions(): void {
-        // Register CodeMirror extension for live preview with settings
+    private setupExtensions(): void {
         this.registerEditorExtension(pandocExtendedMarkdownExtension(
             () => this.settings,
             () => {
@@ -98,10 +112,7 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
             () => this as Component
         ));
         
-        // Register list autocompletion keymap with highest priority
-        this.registerEditorExtension(Prec.highest(keymap.of(createListAutocompletionKeymap(
-            () => this.settings
-        ))));
+        this.registerEditorSuggest(new FencedDivReferenceSuggest(this));
     }
 
     private registerPostProcessor(): void {
@@ -136,86 +147,15 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
         // Register workspace events for mode change detection
         this.registerEvent(this.app.workspace.on("layout-change", updateStates));
         this.registerEvent(this.app.workspace.on("active-leaf-change", updateStates));
-        this.registerEvent(this.app.workspace.on("file-open", updateStates));
+        this.registerEvent(this.app.workspace.on("file-open", async (file) => {
+            if (file) {
+                await LongformProjectManager.getInstance().checkAndLoadProjectForFile(file);
+            }
+            updateStates();
+        }));
     }
 
     private registerCommands(): void {
-        // Add command to check strict pandoc linting
-        this.addCommand({
-            id: COMMANDS.CHECK_PANDOC,
-            name: 'Check pandoc formatting',
-            editorCallback: (editor: Editor) => {
-                const content = editor.getValue();
-                const issues = checkPandocFormatting(
-                    content,
-                    isCustomLabelListsEnabled(this.settings)
-                );
-                
-                if (issues.length === 0) {
-                    new Notice(MESSAGES.PANDOC_COMPLIANT);
-                } else {
-                    const issueList = issues.map(issue => 
-                        `Line ${issue.line}: ${issue.message}`
-                    ).join('\n');
-                    new Notice(`${MESSAGES.FORMATTING_ISSUES(issues.length)}:\n${issueList}`, UI_CONSTANTS.NOTICE_DURATION_MS);
-                }
-            }
-        });
-        
-        // Add command to auto-format to pandoc standard
-        this.addCommand({
-            id: COMMANDS.FORMAT_PANDOC,
-            name: 'Format document to pandoc standard',
-            editorCallback: (editor: Editor) => {
-                const content = editor.getValue();
-                const formatted = formatToPandocStandard(
-                    content,
-                    isCustomLabelListsEnabled(this.settings)
-                );
-                
-                if (content !== formatted) {
-                    editor.setValue(formatted);
-                    new Notice(MESSAGES.FORMAT_SUCCESS);
-                } else {
-                    new Notice(MESSAGES.FORMAT_ALREADY_COMPLIANT);
-                }
-            }
-        });
-        
-        // Add command to toggle bold style for definition terms
-        this.addCommand({
-            id: COMMANDS.TOGGLE_DEFINITION_BOLD,
-            name: 'Toggle definition list bold style',
-            editorCallback: (editor: Editor) => {
-                const content = editor.getValue();
-                const toggled = this.toggleDefinitionBoldStyle(content);
-                
-                if (content !== toggled) {
-                    editor.setValue(toggled);
-                    new Notice(MESSAGES.TOGGLE_BOLD_SUCCESS);
-                } else {
-                    new Notice(MESSAGES.NO_DEFINITION_TERMS);
-                }
-            }
-        });
-        
-        // Add command to toggle underline style for definition terms
-        this.addCommand({
-            id: COMMANDS.TOGGLE_DEFINITION_UNDERLINE,
-            name: 'Toggle definition list underline style',
-            editorCallback: (editor: Editor) => {
-                const content = editor.getValue();
-                const toggled = this.toggleDefinitionUnderlineStyle(content);
-                
-                if (content !== toggled) {
-                    editor.setValue(toggled);
-                    new Notice(MESSAGES.TOGGLE_UNDERLINE_SUCCESS);
-                } else {
-                    new Notice(MESSAGES.NO_DEFINITION_TERMS);
-                }
-            }
-        });
-        
         // Add command to open list panel view
         this.addCommand({
             id: COMMANDS.OPEN_LIST_PANEL,
@@ -224,6 +164,17 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
                 void this.activateListPanelView();
             }
         });
+
+        this.addCommand({
+            id: COMMANDS.EXPORT_PANDOC,
+            name: 'Export to Pandoc',
+            editorCallback: (editor, view) => {
+                const exporter = new PandocExporter(this.app, this.settings);
+                void exporter.export(view.file!, 'standalone', this.settings.defaultExportFormat);
+            }
+        });
+
+
     }
 
     onunload() {
@@ -233,6 +184,15 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
         // List panel views will auto-reinitialize when plugin reloads
         // Other cleanup is handled automatically by Obsidian
     }
+
+    public getListPanelView(): ListPanelView | null {
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_LIST_PANEL);
+        if (leaves.length > 0 && leaves[0].view instanceof ListPanelView) {
+            return leaves[0].view;
+        }
+        return null;
+    }
+
     
     async activateListPanelView() {
         if (!this.settings.enableListPanel) {
@@ -300,131 +260,7 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
         this.settings = normalizeSettings(this.settings);
         await this.saveData(this.settings);
     }
-    
-    private isDefinitionTerm(lines: string[], index: number): boolean {
-        if (index + 1 >= lines.length) {
-            return false;
-        }
-        
-        const nextLine = lines[index + 1].trim();
-        if (ListPatterns.isDefinitionMarker(nextLine)) {
-            return true;
-        }
-        
-        // Check line after empty line
-        if (nextLine === '' && index + 2 < lines.length) {
-            const lineAfterEmpty = lines[index + 2].trim();
-            return ListPatterns.isDefinitionMarker(lineAfterEmpty) !== null;
-        }
-        
-        return false;
-    }
 
-    private identifyDefinitionTerms(lines: string[]): {terms: {index: number, hasBold: boolean}[], anyHasBold: boolean} {
-        const definitionTerms: {index: number, hasBold: boolean}[] = [];
-        let anyHasBold = false;
-        
-        for (let i = 0; i < lines.length; i++) {
-            const trimmedLine = lines[i].trim();
-            
-            // Skip empty lines and lines that are definition markers
-            if (!trimmedLine || ListPatterns.isDefinitionMarker(trimmedLine)) {
-                continue;
-            }
-            
-            if (this.isDefinitionTerm(lines, i)) {
-                const hasBold = ListPatterns.BOLD_TEXT.test(trimmedLine);
-                definitionTerms.push({index: i, hasBold});
-                if (hasBold) {
-                    anyHasBold = true;
-                }
-            }
-        }
-        
-        return { terms: definitionTerms, anyHasBold };
-    }
-    
-    private identifyDefinitionTermsWithUnderline(lines: string[]): {terms: {index: number, hasUnderline: boolean}[], anyHasUnderline: boolean} {
-        const definitionTerms: {index: number, hasUnderline: boolean}[] = [];
-        let anyHasUnderline = false;
-        
-        for (let i = 0; i < lines.length; i++) {
-            const trimmedLine = lines[i].trim();
-            
-            // Skip empty lines and lines that are definition markers
-            if (!trimmedLine || ListPatterns.isDefinitionMarker(trimmedLine)) {
-                continue;
-            }
-            
-            if (this.isDefinitionTerm(lines, i)) {
-                const hasUnderline = ListPatterns.UNDERLINE_SPAN.test(trimmedLine);
-                definitionTerms.push({index: i, hasUnderline});
-                if (hasUnderline) {
-                    anyHasUnderline = true;
-                }
-            }
-        }
-        
-        return { terms: definitionTerms, anyHasUnderline };
-    }
-
-    toggleDefinitionBoldStyle(content: string): string {
-        const lines = content.split('\n');
-        const modifiedLines = [...lines];
-        
-        const { terms, anyHasBold } = this.identifyDefinitionTerms(lines);
-        
-        // Apply unified formatting
-        for (const term of terms) {
-            const line = lines[term.index];
-            const trimmedLine = line.trim();
-            const originalIndent = ListPatterns.getIndent(line);
-            
-            if (anyHasBold) {
-                // Remove bold from all terms
-                const match = trimmedLine.match(ListPatterns.BOLD_TEXT);
-                if (match) {
-                    modifiedLines[term.index] = originalIndent + match[1];
-                }
-            } else {
-                // Add bold to all terms
-                if (!ListPatterns.BOLD_TEXT.test(trimmedLine)) {
-                    modifiedLines[term.index] = originalIndent + '**' + trimmedLine + '**';
-                }
-            }
-        }
-        
-        return modifiedLines.join('\n');
-    }
-    
-    toggleDefinitionUnderlineStyle(content: string): string {
-        const lines = content.split('\n');
-        const modifiedLines = [...lines];
-        
-        const { terms, anyHasUnderline } = this.identifyDefinitionTermsWithUnderline(lines);
-        
-        // Apply unified formatting
-        for (const term of terms) {
-            const line = lines[term.index];
-            const trimmedLine = line.trim();
-            const originalIndent = ListPatterns.getIndent(line);
-            
-            if (anyHasUnderline) {
-                // Remove underline from all terms
-                const match = trimmedLine.match(ListPatterns.UNDERLINE_SPAN);
-                if (match) {
-                    modifiedLines[term.index] = originalIndent + match[1];
-                }
-            } else {
-                // Add underline to all terms
-                if (!ListPatterns.UNDERLINE_SPAN.test(trimmedLine)) {
-                    modifiedLines[term.index] = originalIndent + '<span class="underline">' + trimmedLine + '</span>';
-                }
-            }
-        }
-        
-        return modifiedLines.join('\n');
-    }
 }
 
 export default PandocExtendedMarkdownPlugin;

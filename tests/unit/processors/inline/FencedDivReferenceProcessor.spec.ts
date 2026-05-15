@@ -2,7 +2,7 @@ import { EditorView } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { FencedDivReferenceProcessor } from '../../../../src/live-preview/pipeline/inline/FencedDivReferenceProcessor';
 import { ProcessingContext, ContentRegion } from '../../../../src/live-preview/pipeline/types';
-import { PlaceholderContext } from '../../../../src/shared/utils/placeholderProcessor';
+
 
 describe('FencedDivReferenceProcessor', () => {
     let processor: FencedDivReferenceProcessor;
@@ -24,37 +24,15 @@ describe('FencedDivReferenceProcessor', () => {
             view,
             settings: {
                 strictPandocMode: false,
-                enableFencedDivs: true,
-                enableFencedDivExtras: true
-            },
-            exampleLabels: new Map(),
-            exampleContent: new Map(),
-            exampleLineNumbers: new Map(),
-            duplicateExampleLabels: new Map(),
-            duplicateExampleContent: new Map(),
-            customLabels: new Map(),
-            rawToProcessed: new Map(),
-            duplicateCustomLabels: new Set(),
-            placeholderContext: new PlaceholderContext(),
-            invalidLines: new Set(),
+                enableFencedDivs: true
+            } as any,
             contentRegions: [],
             structuralDecorations: [],
             inlineDecorations: [],
-            hashCounter: { value: 1 },
-            definitionState: {
-                lastWasItem: false,
-                pendingBlankLine: false
-            },
             fencedDivLabels: new Map([
                 ['thm:label', {
                     label: 'thm:label',
-                    title: '',
-                    displayName: 'Theorem 1',
-                    typeLabel: 'Theorem',
-                    typeKey: 'theorem',
-                    number: 1,
-                    referenceText: 'Theorem 1',
-                    blockTitleText: 'Theorem 1',
+                    displayName: 'Theorem',
                     lineNumber: 1,
                     classes: ['theorem'],
                     content: 'content'
@@ -99,33 +77,7 @@ describe('FencedDivReferenceProcessor', () => {
         expect(matches).toHaveLength(0);
     });
 
-    it('finds references in strict mode when fenced div extras are enabled', () => {
-        context.settings.strictPandocMode = true;
-        const region: ContentRegion = {
-            from: 0,
-            to: view.state.doc.length,
-            type: 'normal'
-        };
-
-        const matches = processor.findMatches('see @thm:label.', region, context);
-
-        expect(matches).toHaveLength(1);
-    });
-
-    it('does not find references when fenced div extras are disabled', () => {
-        context.settings.enableFencedDivExtras = false;
-        const region: ContentRegion = {
-            from: 0,
-            to: view.state.doc.length,
-            type: 'normal'
-        };
-
-        const matches = processor.findMatches('see @thm:label.', region, context);
-
-        expect(matches).toHaveLength(0);
-    });
-
-    it('creates a reference widget with the resolved fenced div reference text', () => {
+    it('creates a reference widget with the resolved fenced div name', () => {
         const decoration = processor.createDecoration({
             from: 4,
             to: 14,
@@ -135,7 +87,7 @@ describe('FencedDivReferenceProcessor', () => {
 
         const widget = decoration.spec?.widget;
         expect(widget?.constructor.name).toBe('FencedDivReferenceWidget');
-        expect(widget?.displayName).toBe('Theorem 1');
+        expect(widget?.displayName).toBe('Theorem');
     });
 
     it('supports normal and fenced-div content regions', () => {

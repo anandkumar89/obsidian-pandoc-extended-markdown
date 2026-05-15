@@ -1,19 +1,12 @@
 import { FencedDivAttributes } from '../../../../shared/types/fencedDivTypes';
-import {
-    getFencedDivTitleClass,
-    isFencedDivControlClass,
-    synthesizeFencedDivTitleFromClasses
-} from '../../../../shared/utils/fencedDivReferenceMetadata';
 
 const OPENING_FENCE = /^(:{3,})(.*)$/;
-const CLOSING_FENCE = /^:{3,}[ \t]*$/;
+const CLOSING_FENCE = /^(:{3,})[ \t]*$/;
 const ATTRIBUTE_KEY = /^[A-Za-z:][A-Za-z0-9_:.-]*$/;
 const ATTRIBUTE_ID = /^#[^\s@,=]+$/;
 const ATTRIBUTE_CLASS = /^\.[\p{L}][\p{L}\p{N}_:.-]*$/u;
 const TRAILING_COLONS = /^[ \t]*:+[ \t]*$/;
-const TRAILING_VISUAL_COLONS = /[ \t]+:+[ \t]*$/;
 const UNBRACED_CLASS = /^(\S+)(?:[ \t]+:+)?$/;
-const READABLE_CLASS = /^[^\s#={},]+$/;
 const HTML_BLOCK_TAGS = new Set([
     'address', 'article', 'aside', 'base', 'basefont', 'blockquote', 'body',
     'caption', 'center', 'col', 'colgroup', 'dd', 'details', 'dialog', 'dir',
@@ -29,14 +22,12 @@ interface ParsedAttributeTokens {
     id?: string;
     classes: string[];
     keyValues: Map<string, string>;
+    inlineTitle?: string;
 }
 
-interface FencedDivParserSettings {
-    strictPandocMode?: boolean;
-}
-
-export function isFencedDivClosing(lineText: string): boolean {
-    return CLOSING_FENCE.test(lineText);
+export function isFencedDivClosing(lineText: string): string | null {
+    const match = lineText.match(CLOSING_FENCE);
+    return match ? match[1] : null;
 }
 
 export function allowsFencedDivOpeningAfterLine(lineText: string): boolean {
@@ -50,10 +41,7 @@ export function allowsFencedDivOpeningAfterLine(lineText: string): boolean {
         isSingleLineHtmlBlock(trimmedLine);
 }
 
-export function parseFencedDivOpening(
-    lineText: string,
-    settings?: FencedDivParserSettings
-): FencedDivAttributes | null {
+export function parseFencedDivOpening(lineText: string): FencedDivAttributes | null {
     const openingMatch = lineText.match(OPENING_FENCE);
     if (!openingMatch) {
         return null;
@@ -65,11 +53,9 @@ export function parseFencedDivOpening(
         return null;
     }
 
-    const parsedAttributes = parseOpeningAttributes(
-        rawAttributes,
-        openingMatch[2] || '',
-        settings
-    );
+    const parsedAttributes = rawAttributes.startsWith('{')
+        ? parseBracedAttributes(rawAttributes)
+        : parseUnbracedAttributes(rawAttributes);
     if (!parsedAttributes) {
         return null;
     }
@@ -81,25 +67,6 @@ export function parseFencedDivOpening(
         markerText: `${fence}${openingMatch[2] || ''}`,
         ...parsedAttributes
     };
-}
-
-function parseOpeningAttributes(
-    rawAttributes: string,
-    rawTextAfterFence: string,
-    settings?: FencedDivParserSettings
-): ParsedAttributeTokens | null {
-    if (rawAttributes.startsWith('{')) {
-        return parseBracedAttributes(rawAttributes) ||
-            parseReadableBracedTitleAfterAttributes(rawAttributes, rawTextAfterFence, settings);
-    }
-
-    if (!settings?.strictPandocMode && /^[ \t]+/.test(rawTextAfterFence)) {
-        return parseReadableBracedTitleBeforeAttributes(rawAttributes) ||
-            parseReadableShorthandAttributes(rawAttributes) ||
-            parseUnbracedAttributes(rawAttributes);
-    }
-
-    return parseUnbracedAttributes(rawAttributes);
 }
 
 function isAtxHeading(lineText: string): boolean {
@@ -117,38 +84,20 @@ function isSingleLineHtmlBlock(lineText: string): boolean {
     return Boolean(match?.[1] && HTML_BLOCK_TAGS.has(match[1].toLowerCase()));
 }
 
+export function getFencedDivDisplayName(classes: string[]): string {
+    const primaryClass = classes[0] || 'div';
+    return primaryClass
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
 export function getFencedDivCssClass(classes: string[]): string | undefined {
-    const primaryClass = getFencedDivTitleClass(classes);
+    const primaryClass = classes[0];
     if (!primaryClass) {
         return undefined;
     }
 
-    return normalizeFencedDivCssClass(primaryClass);
-}
-
-export function getFencedDivCssClasses(classes: string[]): string[] {
-    const cssClasses: string[] = [];
-    const seen = new Set<string>();
-
-    for (const className of classes) {
-        if (isFencedDivControlClass(className)) {
-            continue;
-        }
-
-        const cssClass = normalizeFencedDivCssClass(className);
-        if (!cssClass || seen.has(cssClass)) {
-            continue;
-        }
-
-        seen.add(cssClass);
-        cssClasses.push(cssClass);
-    }
-
-    return cssClasses;
-}
-
-function normalizeFencedDivCssClass(className: string): string | undefined {
-    return className
+    return primaryClass
         .toLowerCase()
         .replace(/[^a-z0-9_-]+/g, '-')
         .replace(/^-+|-+$/g, '') || undefined;
@@ -161,9 +110,9 @@ function parseBracedAttributes(rawAttributes: string): ParsedAttributeTokens | n
     }
 
     const trailingText = rawAttributes.slice(closingBraceIndex + 1);
-    if (trailingText && !TRAILING_COLONS.test(trailingText)) {
-        return null;
-    }
+    const trailingColonsMatch = trailingText.match(/:+[ \t]*$/);
+    const textWithoutColons = trailingColonsMatch ? trailingText.slice(0, -trailingColonsMatch[0].length) : trailingText;
+    const inlineTitle = textWithoutColons.trim();
 
     const bracedAttributeText = rawAttributes.slice(0, closingBraceIndex + 1);
     const content = rawAttributes.slice(1, closingBraceIndex);
@@ -174,98 +123,32 @@ function parseBracedAttributes(rawAttributes: string): ParsedAttributeTokens | n
 
     const parsedTokens = parseAttributeTokens(tokens);
     if (parsedTokens) {
+        parsedTokens.inlineTitle = inlineTitle || undefined;
         return parsedTokens;
     }
 
     return tokens.length === 1
-        ? createUnbracedClass(bracedAttributeText)
+        ? { ...createUnbracedClass(bracedAttributeText), inlineTitle: inlineTitle || undefined }
         : null;
-}
-
-function parseReadableBracedTitleAfterAttributes(
-    rawAttributes: string,
-    rawTextAfterFence: string,
-    settings?: FencedDivParserSettings
-): ParsedAttributeTokens | null {
-    if (settings?.strictPandocMode || !/^[ \t]+/.test(rawTextAfterFence)) {
-        return null;
-    }
-
-    const closingBraceIndex = findClosingBrace(rawAttributes);
-    if (closingBraceIndex < 0) {
-        return null;
-    }
-
-    const title = stripTrailingVisualColons(rawAttributes.slice(closingBraceIndex + 1)).trim();
-    if (!title) {
-        return null;
-    }
-
-    const parsedAttributes = parseBracedAttributeSlice(rawAttributes, 0, closingBraceIndex);
-    return parsedAttributes
-        ? withTitle(parsedAttributes, title)
-        : null;
-}
-
-function parseReadableBracedTitleBeforeAttributes(rawAttributes: string): ParsedAttributeTokens | null {
-    const attributeText = stripTrailingVisualColons(rawAttributes).trim();
-    const closingBraceIndex = attributeText.length - 1;
-    if (attributeText[closingBraceIndex] !== '}') {
-        return null;
-    }
-
-    for (let index = 0; index < attributeText.length; index++) {
-        if (attributeText[index] !== '{') {
-            continue;
-        }
-
-        const localClosingBraceIndex = findClosingBrace(attributeText.slice(index));
-        if (localClosingBraceIndex < 0 || index + localClosingBraceIndex !== closingBraceIndex) {
-            continue;
-        }
-
-        const title = attributeText.slice(0, index).trim();
-        if (!title) {
-            return null;
-        }
-
-        const parsedAttributes = parseBracedAttributeSlice(
-            attributeText,
-            index,
-            closingBraceIndex
-        );
-        return parsedAttributes
-            ? withTitle(parsedAttributes, title)
-            : null;
-    }
-
-    return null;
-}
-
-function parseBracedAttributeSlice(
-    text: string,
-    openingBraceIndex: number,
-    closingBraceIndex: number
-): ParsedAttributeTokens | null {
-    const content = text.slice(openingBraceIndex + 1, closingBraceIndex);
-    const tokens = splitAttributeTokens(content);
-    return tokens
-        ? parseAttributeTokens(tokens)
-        : null;
-}
-
-function withTitle(attributes: ParsedAttributeTokens, title: string): ParsedAttributeTokens {
-    attributes.keyValues.set('title', title);
-    return attributes;
 }
 
 function parseUnbracedAttributes(rawAttributes: string): ParsedAttributeTokens | null {
     const unbracedMatch = rawAttributes.match(UNBRACED_CLASS);
     if (!unbracedMatch) {
+        // Fallback: check if it matches unbraced class + title
+        const matchWithTitle = rawAttributes.match(/^(\S+)(?:[ \t]+)(.*)$/);
+        if (matchWithTitle) {
+            let inlineTitle = matchWithTitle[2].trim();
+            const trailingColonsMatch = inlineTitle.match(/:+[ \t]*$/);
+            if (trailingColonsMatch) {
+                inlineTitle = inlineTitle.slice(0, -trailingColonsMatch[0].length).trim();
+            }
+            return { ...createUnbracedClass(matchWithTitle[1]), inlineTitle: inlineTitle || undefined };
+        }
         return null;
     }
 
-    return createUnbracedClassWithTitle(unbracedMatch[1] || '');
+    return createUnbracedClass(unbracedMatch[1] || '');
 }
 
 function createUnbracedClass(className: string): ParsedAttributeTokens {
@@ -273,65 +156,6 @@ function createUnbracedClass(className: string): ParsedAttributeTokens {
         classes: [className],
         keyValues: new Map()
     };
-}
-
-function createUnbracedClassWithTitle(className: string): ParsedAttributeTokens {
-    const attributes = createUnbracedClass(className);
-    attributes.keyValues = withSynthesizedTitle(attributes.keyValues, attributes.classes);
-    return attributes;
-}
-
-function parseReadableShorthandAttributes(rawAttributes: string): ParsedAttributeTokens | null {
-    const attributeText = rawAttributes.replace(TRAILING_VISUAL_COLONS, '').trim();
-    if (!attributeText) {
-        return null;
-    }
-
-    const tokens = splitAttributeTokens(attributeText);
-    if (!tokens || tokens.length === 0) {
-        return null;
-    }
-
-    const classes: string[] = [];
-    const keyValues = new Map<string, string>();
-    let id: string | undefined;
-
-    for (const token of tokens) {
-        if (ATTRIBUTE_ID.test(token)) {
-            id = token.slice(1);
-            continue;
-        }
-
-        if (token.includes('=')) {
-            const parsedKeyValue = parseKeyValueToken(token);
-            if (!parsedKeyValue) {
-                return null;
-            }
-            keyValues.set(parsedKeyValue.key, parsedKeyValue.value);
-            continue;
-        }
-
-        if (isReadableClassToken(token)) {
-            classes.push(token);
-            continue;
-        }
-
-        return null;
-    }
-
-    return {
-        id,
-        classes,
-        keyValues: withSynthesizedTitle(keyValues, classes)
-    };
-}
-
-function isReadableClassToken(token: string): boolean {
-    return READABLE_CLASS.test(token) && !/^:+$/.test(token);
-}
-
-function stripTrailingVisualColons(text: string): string {
-    return text.replace(TRAILING_VISUAL_COLONS, '');
 }
 
 function parseAttributeTokens(tokens: string[]): ParsedAttributeTokens | null {
@@ -381,7 +205,7 @@ function parseAttributeTokens(tokens: string[]): ParsedAttributeTokens | null {
     return {
         id,
         classes,
-        keyValues: withSynthesizedTitle(keyValues, classes)
+        keyValues
     };
 }
 
@@ -477,21 +301,6 @@ function parseKeyValueToken(token: string): { key: string; value: string } | nul
     };
 }
 
-function withSynthesizedTitle(
-    keyValues: Map<string, string>,
-    classes: string[]
-): Map<string, string> {
-    if (keyValues.has('title')) {
-        return keyValues;
-    }
-
-    const title = synthesizeFencedDivTitleFromClasses(classes);
-    if (title) {
-        keyValues.set('title', title);
-    }
-    return keyValues;
-}
-
 function stripQuotes(value: string): string {
     if (value.length < 2) {
         return value;
@@ -503,20 +312,23 @@ function stripQuotes(value: string): string {
     }
 
     let unquoted = '';
-    const quotedValue = value.slice(1, -1);
-    for (let index = 0; index < quotedValue.length; index++) {
-        const char = quotedValue[index];
+    let escaped = false;
+    for (const char of value.slice(1, -1)) {
+        if (escaped) {
+            unquoted += char;
+            escaped = false;
+            continue;
+        }
 
-        if (char === '\\' && index + 1 < quotedValue.length) {
-            unquoted += quotedValue[index + 1];
-            index++;
+        if (char === '\\') {
+            escaped = true;
             continue;
         }
 
         unquoted += char;
     }
 
-    return unquoted;
+    return escaped ? `${unquoted}\\` : unquoted;
 }
 
 function findClosingBrace(value: string): number {
