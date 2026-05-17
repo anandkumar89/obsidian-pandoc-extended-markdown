@@ -40,14 +40,20 @@ export class FigurePanelModule extends BasePanelModule {
 
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
-            itemsToRender = pm.getProjectFigures(filePath);
+        if (pinnedProject || pinnedFile) {
+            itemsToRender = pm.getFigs();
         } else {
-            const targetPath = pinnedFile || activeFile || '';
-            if (activeView && activeFile === targetPath) {
-                itemsToRender = this.figureItems;
-            } else if (targetPath) {
-                itemsToRender = pm.getFileFigures(targetPath);
+            const activeFile = activeView?.file?.path;
+            const showProject = this.plugin.settings.showProjectWideItems;
+
+            if (activeFile && pm.isFileInProject(activeFile) && showProject) {
+                itemsToRender = pm.getProjectFigures(activeFile);
+            } else if (activeFile) {
+                if (activeView && activeFile === activeFile) {
+                    itemsToRender = this.figureItems;
+                } else {
+                    itemsToRender = pm.getFileFigures(activeFile);
+                }
             }
         }
 

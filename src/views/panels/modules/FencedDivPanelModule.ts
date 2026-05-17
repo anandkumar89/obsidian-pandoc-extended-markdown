@@ -47,10 +47,9 @@ export class FencedDivPanelModule extends BasePanelModule {
 
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
-            const projectPath = pinnedProject || (activeFile ? pm.getProjectPath(activeFile) : '');
-            const globalEntries = pm.getFencedDivsForProject(projectPath || '');
-            itemsToRender = globalEntries.map(e => ({
+        if (pinnedProject || pinnedFile) {
+            const cached = pm.getBlocks();
+            itemsToRender = cached.map(e => ({
                 title: e.displayTitle || e.displayName,
                 content: e.content,
                 lineNumber: e.lineNumber,
@@ -63,12 +62,13 @@ export class FencedDivPanelModule extends BasePanelModule {
                 filePath: e.filePath
             }));
         } else {
-            const targetPath = pinnedFile || activeFile || '';
-            if (activeView && activeFile === targetPath) {
-                itemsToRender = this.fencedDivItems;
-            } else if (targetPath) {
-                const cached = pm.getFileEntries(targetPath);
-                itemsToRender = cached.map(e => ({
+            const activeFile = activeView?.file?.path;
+            const showProject = this.plugin.settings.showProjectWideItems;
+
+            if (activeFile && pm.isFileInProject(activeFile) && showProject) {
+                const projectPath = pm.getProjectPath(activeFile) || '';
+                const globalEntries = pm.getFencedDivsForProject(projectPath);
+                itemsToRender = globalEntries.map(e => ({
                     title: e.displayTitle || e.displayName,
                     content: e.content,
                     lineNumber: e.lineNumber,
@@ -80,23 +80,41 @@ export class FencedDivPanelModule extends BasePanelModule {
                     position: { line: e.lineNumber, ch: 0 },
                     filePath: e.filePath
                 }));
+            } else if (activeFile) {
+                if (activeView && activeFile === activeFile) {
+                    itemsToRender = this.fencedDivItems;
+                } else {
+                    const cached = pm.getFileEntries(activeFile);
+                    itemsToRender = cached.map(e => ({
+                        title: e.displayTitle || e.displayName,
+                        content: e.content,
+                        lineNumber: e.lineNumber,
+                        classes: e.classes,
+                        label: e.label,
+                        inlineTitle: e.inlineTitle,
+                        contentLineNumber: e.lineNumber,
+                        contentPosition: { line: e.lineNumber, ch: 0 },
+                        position: { line: e.lineNumber, ch: 0 },
+                        filePath: e.filePath
+                    }));
+                }
             }
-
-            itemsToRender = itemsToRender.map(item => {
-                 let finalTitle = item.title;
-                 let inlineTitle = item.inlineTitle;
-                 if (item.label) {
-                      const globalRef = pm.getReference(item.label);
-                      if (globalRef && globalRef.displayTitle) {
-                           finalTitle = globalRef.displayTitle;
-                      }
-                      if (globalRef && globalRef.inlineTitle) {
-                           inlineTitle = globalRef.inlineTitle;
-                      }
-                 }
-                 return { ...item, title: finalTitle, inlineTitle };
-            });
         }
+
+        itemsToRender = itemsToRender.map(item => {
+             let finalTitle = item.title;
+             let inlineTitle = item.inlineTitle;
+             if (item.label) {
+                  const globalRef = pm.getReference(item.label);
+                  if (globalRef && globalRef.displayTitle) {
+                       finalTitle = globalRef.displayTitle;
+                  }
+                  if (globalRef && globalRef.inlineTitle) {
+                       inlineTitle = globalRef.inlineTitle;
+                  }
+             }
+             return { ...item, title: finalTitle, inlineTitle };
+        });
 
         if (this.searchQuery) {
             itemsToRender = itemsToRender.filter(item => 

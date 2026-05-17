@@ -40,14 +40,20 @@ export class EquationPanelModule extends BasePanelModule {
 
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
-            itemsToRender = pm.getProjectEquations(filePath);
+        if (pinnedProject || pinnedFile) {
+            itemsToRender = pm.getEqns();
         } else {
-            const targetPath = pinnedFile || activeFile || '';
-            if (activeView && activeFile === targetPath) {
-                itemsToRender = this.equationItems;
-            } else if (targetPath) {
-                itemsToRender = pm.getFileEquations(targetPath);
+            const activeFile = activeView?.file?.path;
+            const showProject = this.plugin.settings.showProjectWideItems;
+
+            if (activeFile && pm.isFileInProject(activeFile) && showProject) {
+                itemsToRender = pm.getProjectEquations(activeFile);
+            } else if (activeFile) {
+                if (activeView && activeFile === activeFile) {
+                    itemsToRender = this.equationItems;
+                } else {
+                    itemsToRender = pm.getFileEquations(activeFile);
+                }
             }
         }
 
