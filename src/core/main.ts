@@ -42,7 +42,8 @@ export class PandocExtendedMarkdownPlugin extends Plugin {
         this.addSettingTab(new PandocExtendedMarkdownSettingTab(this.app, this));
         
         // Initialize Longform Project Manager before extensions that depend on it
-        LongformProjectManager.getInstance(this);
+        const pm = LongformProjectManager.getInstance(this);
+        await pm.initialize();
 
         // Register all extensions and processors
         this.setupExtensions();

@@ -79,7 +79,7 @@ export function processFencedDivs(
         }
 
         const lineText = getTextWithLineBreaks(candidate);
-        if (processMultilineCandidate(candidate, lineText, stack, labels)) {
+        if (processMultilineCandidate(candidate, lineText, stack, labels, docPath)) {
             continue;
         }
 
@@ -88,7 +88,7 @@ export function processFencedDivs(
             const displayName = getFencedDivDisplayName(opening.classes);
             let finalDisplayName = displayName;
             if (opening.id) {
-                const globalRef = LongformProjectManager.getInstance().getReference(opening.id);
+                const globalRef = LongformProjectManager.getInstance().getReference(opening.id, docPath);
                 if (globalRef && globalRef.displayTitle) {
                     finalDisplayName = globalRef.displayTitle;
                 }
@@ -135,7 +135,7 @@ export function processFencedDivs(
         }
     }
 
-    processFencedDivReferences(element, labels);
+    processFencedDivReferences(element, labels, docPath);
 
     if (preserveStack && stack.length === 0) {
         chunkStacks.delete(docPath);
@@ -156,7 +156,8 @@ function processMultilineCandidate(
     candidate: Element,
     text: string,
     stack: ActiveFencedDiv[],
-    labels: Map<string, FencedDivReference>
+    labels: Map<string, FencedDivReference>,
+    docPath: string
 ): boolean {
     if (!text.includes('\n')) {
         return false;
@@ -174,7 +175,7 @@ function processMultilineCandidate(
             const displayName = getFencedDivDisplayName(opening.classes);
             let finalDisplayName = displayName;
             if (opening.id) {
-                const globalRef = LongformProjectManager.getInstance().getReference(opening.id);
+                const globalRef = LongformProjectManager.getInstance().getReference(opening.id, docPath);
                 if (globalRef && globalRef.displayTitle) {
                     finalDisplayName = globalRef.displayTitle;
                 }
@@ -362,7 +363,8 @@ function insertFencedDiv(
 
 function processFencedDivReferences(
     element: HTMLElement,
-    labels: Map<string, FencedDivReference>
+    labels: Map<string, FencedDivReference>,
+    docPath: string
 ): void {
     const walker = document.createTreeWalker(
         element,
@@ -386,13 +388,14 @@ function processFencedDivReferences(
     }
 
     for (const node of nodes) {
-        replaceReferencesInTextNode(node, labels);
+        replaceReferencesInTextNode(node, labels, docPath);
     }
 }
 
 function replaceReferencesInTextNode(
     node: Text,
-    labels: Map<string, FencedDivReference>
+    labels: Map<string, FencedDivReference>,
+    docPath: string
 ): void {
     const text = node.textContent || '';
     const replacements: (Text | HTMLElement)[] = [];
@@ -401,7 +404,7 @@ function replaceReferencesInTextNode(
 
     PANDOC_CITATION_REFERENCE.lastIndex = 0;
     while ((match = PANDOC_CITATION_REFERENCE.exec(text)) !== null) {
-        const label = resolveLabel(match[1], labels);
+        const label = resolveLabel(match[1], labels, docPath);
         if (!label) {
             continue;
         }
@@ -413,17 +416,17 @@ function replaceReferencesInTextNode(
         }
         
         if (label.startsWith('eq:')) {
-            const eqRef = LongformProjectManager.getInstance().getEquationReference(label);
+            const eqRef = LongformProjectManager.getInstance().getEquationReference(label, docPath);
             replacements.push(createReferenceElement(label, {
                 label,
                 displayName: `(${label})`,
                 lineNumber: eqRef?.lineNumber || 0,
                 classes: [],
                 content: eqRef?.content || ''
-            }));
+            }, docPath));
         } else {
-            const reference = LongformProjectManager.getInstance().getReference(label) || labels.get(label);
-            replacements.push(createReferenceElement(label, reference));
+            const reference = LongformProjectManager.getInstance().getReference(label, docPath) || labels.get(label);
+            replacements.push(createReferenceElement(label, reference, docPath));
         }
         
         lastIndex = endIndex;
@@ -450,7 +453,8 @@ function replaceReferencesInTextNode(
 
 function createReferenceElement(
     label: string,
-    reference: FencedDivReference | undefined
+    reference: FencedDivReference | undefined,
+    docPath: string
 ): HTMLElement {
     const span = document.createElement('span');
     span.className = CSS_CLASSES.FENCED_DIV_REFERENCE;
@@ -464,10 +468,10 @@ function createReferenceElement(
     span.addEventListener('click', (e) => {
         const { app } = pluginStateManager.getAppAndSettings() || {};
         if (app) {
-            let globalRef = LongformProjectManager.getInstance().getReference(label);
+            let globalRef = LongformProjectManager.getInstance().getReference(label, docPath);
             if (!globalRef && label.startsWith('eq:')) {
                 const tagLabel = label.substring(3);
-                globalRef = LongformProjectManager.getInstance().getEquationReference(tagLabel);
+                globalRef = LongformProjectManager.getInstance().getEquationReference(tagLabel, docPath);
             }
 
             if (globalRef && globalRef.filePath) {
@@ -488,22 +492,23 @@ function createReferenceElement(
 
 function resolveLabel(
     rawLabel: string | undefined,
-    labels: Map<string, FencedDivReference>
+    labels: Map<string, FencedDivReference>,
+    docPath: string
 ): string | undefined {
     if (!rawLabel) {
         return undefined;
     }
 
     if (rawLabel.startsWith('eq:')) {
-        if (LongformProjectManager.getInstance().getEquationReference(rawLabel)) return rawLabel;
+        if (LongformProjectManager.getInstance().getEquationReference(rawLabel, docPath)) return rawLabel;
         return rawLabel; // Allow it so it renders as (eq:label)
     }
 
-    if (LongformProjectManager.getInstance().getReference(rawLabel)) return rawLabel;
+    if (LongformProjectManager.getInstance().getReference(rawLabel, docPath)) return rawLabel;
     if (labels.has(rawLabel)) return rawLabel;
 
     const trimmedLabel = rawLabel.replace(TRAILING_REFERENCE_PUNCTUATION, '');
-    if (LongformProjectManager.getInstance().getReference(trimmedLabel)) return trimmedLabel;
+    if (LongformProjectManager.getInstance().getReference(trimmedLabel, docPath)) return trimmedLabel;
     
     if (trimmedLabel !== rawLabel && labels.has(trimmedLabel)) {
         return trimmedLabel;

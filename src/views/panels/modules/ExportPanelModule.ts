@@ -1,4 +1,4 @@
-import { MarkdownView, TFile, Setting, Notice } from 'obsidian';
+import { MarkdownView, TFile, Setting, Notice, setIcon } from 'obsidian';
 import { BasePanelModule } from './BasePanelModule';
 import { PandocExtendedMarkdownPlugin } from '../../../core/main';
 import { ICONS } from '../../../core/constants';
@@ -35,7 +35,7 @@ export class ExportPanelModule extends BasePanelModule {
         // --- 1. Quick Toggles (Top) ---
         const quickTogglesSection = this.containerEl.createDiv('pem-panel-section');
         quickTogglesSection.createEl('div', { text: 'Quick Toggles', cls: 'pem-section-title' });
-        
+
         new Setting(quickTogglesSection)
             .setName('Heading Numbering')
             .addToggle(toggle => toggle
@@ -47,25 +47,41 @@ export class ExportPanelModule extends BasePanelModule {
                     this.renderContent(activeView);
                 }));
 
-        new Setting(quickTogglesSection)
-            .setName('TOC File Separators')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.showTOCFileBreaks)
-                .onChange(async (value) => {
-                    this.plugin.settings.showTOCFileBreaks = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.app.workspace.trigger('pem:settings-changed');
-                }));
-
         // --- 2. Longform Projects (Middle) ---
         const projectsSection = this.containerEl.createDiv('pem-panel-section');
         projectsSection.createEl('div', { text: 'Longform Projects', cls: 'pem-section-title' });
+
+        const tocModeSetting = new Setting(projectsSection)
+            .setName('TOC Mode');
+        
+        const btnGroup = tocModeSetting.controlEl.createDiv('pem-button-group');
+        const modes = [
+            { id: 'toc', label: 'TOC' },
+            { id: 'toc-rail', label: 'TOC + Rail' },
+            { id: 'rail-only', label: 'Rail Only' }
+        ];
+
+        modes.forEach(mode => {
+            const btn = btnGroup.createEl('button', {
+                text: mode.label,
+                cls: `pem-group-btn ${this.plugin.settings.tocViewMode === mode.id ? 'is-active' : ''}`
+            });
+            btn.addEventListener('click', async () => {
+                this.plugin.settings.tocViewMode = mode.id as any;
+                await this.plugin.saveSettings();
+                this.plugin.app.workspace.trigger('pem:settings-changed');
+                this.renderContent(activeView);
+            });
+        });
         const listContainer = projectsSection.createDiv('pem-panel-project-list');
         void this.renderProjectList(listContainer, activeView);
 
+        // --- Standalone / Active File ---
+        this.renderStandaloneSection(projectsSection, activeView);
+
         // --- 3. Project Management Buttons (Below List) ---
         const mgmtContainer = projectsSection.createDiv('pem-project-mgmt-buttons');
-        
+
         // Add Project Toggle (Show/Hide input)
         const addProjectBtn = mgmtContainer.createEl('button', { text: 'Add a project', cls: 'pem-mgmt-btn' });
         const rescanBtn = mgmtContainer.createEl('button', { text: 'Rescan Long', cls: 'pem-mgmt-btn' });
@@ -102,79 +118,87 @@ export class ExportPanelModule extends BasePanelModule {
             }
         });
 
-        // --- 4. Pinned File or Recent Items (Bottom) ---
-        const pinningSection = this.containerEl.createDiv('pem-panel-section');
-        const pinnedFilePath = this.plugin.settings.pinnedFilePath;
-        const activeFile = activeView?.file;
-        
-        if (pinnedFilePath) {
-            pinningSection.createEl('div', { text: 'Pinned File', cls: 'pem-section-title' });
-            this.renderFileRow(pinningSection, pinnedFilePath, activeView);
-        } else if (activeFile) {
-            pinningSection.createEl('div', { text: 'Active File', cls: 'pem-section-title' });
-            this.renderFileRow(pinningSection, activeFile.path, activeView);
-        } else {
-            // Nothing pinned and no active file - show recents
-            this.renderRecentItems(pinningSection, activeView);
-        }
     }
 
-    private renderFileRow(container: HTMLElement, filePath: string, activeView: MarkdownView | null): void {
-        const pinnedFilePath = this.plugin.settings.pinnedFilePath;
-        const fileRow = container.createDiv('pem-project-item pem-file-row');
-        if (pinnedFilePath === filePath) fileRow.addClass('is-pinned');
+
+
+    private renderStandaloneSection(container: HTMLElement, activeView: MarkdownView | null): void {
+        const pinnedPath = this.plugin.settings.pinnedFilePath;
+        const activeFile = activeView?.file;
+        const filePath = pinnedPath || activeFile?.path;
+
+        if (!filePath) {
+            this.renderRecentItems(container, activeView);
+            return;
+        }
+
+        const listContainer = container.createDiv('pem-panel-project-list pem-mt-medium');
+        const fileRow = listContainer.createDiv('pem-project-item pem-standalone-item');
+        if (pinnedPath === filePath) fileRow.addClass('is-pinned');
 
         const info = fileRow.createDiv('pem-project-info');
-        info.createDiv({ text: filePath.split('/').pop() || '', cls: 'pem-project-name' });
+        const fileName = filePath.split('/').pop() || '';
+        info.createDiv({ text: pinnedPath ? `📍 ${fileName}` : `📄 ${fileName}`, cls: 'pem-project-name' });
         info.createDiv({ text: filePath, cls: 'pem-project-path' });
 
         const actions = fileRow.createDiv('pem-project-actions');
-        const { setIcon } = require('obsidian');
+
+        // Reindex
+        const refreshBtn = actions.createEl('button', { cls: 'pem-action-icon', title: 'Reindex' });
+        setIcon(refreshBtn, 'refresh-cw');
+        refreshBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+            if (file instanceof TFile) {
+                await this.projectManager.updateFileCache(file, true);
+                new Notice(`Reindexed ${file.basename}`);
+                this.renderContent(activeView);
+            }
+        });
 
         // Pin/Unpin
-        const isPinned = pinnedFilePath === filePath;
-        const pinBtn = actions.createEl('button', {
-            cls: isPinned ? 'pem-pin-btn is-active' : 'pem-pin-btn',
-            title: isPinned ? 'Unpin file' : 'Pin file'
+        const isPinned = !!pinnedPath;
+        const pinBtn = actions.createEl('button', { 
+            cls: 'pem-action-icon', 
+            title: isPinned ? 'Unpin' : 'Pin' 
         });
-        pinBtn.innerHTML = isPinned ? '📍' : '📌';
-        pinBtn.addEventListener('click', async () => {
+        setIcon(pinBtn, isPinned ? 'pin-off' : 'pin');
+        pinBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
             if (isPinned) {
                 this.plugin.settings.pinnedFilePath = null;
             } else {
                 this.plugin.settings.pinnedFilePath = filePath;
-                this.plugin.settings.pinnedProjectPath = null;
+                this.plugin.settings.pinnedProjectPath = null; // Exclusive
             }
             await this.plugin.saveSettings();
             this.plugin.app.workspace.trigger('pem:settings-changed');
             this.renderContent(activeView);
         });
 
-        // Refresh
-        const refreshBtn = actions.createEl('button', { cls: 'pem-action-icon', title: 'Refresh' });
-        setIcon(refreshBtn, 'refresh-cw');
-        refreshBtn.addEventListener('click', async () => {
-            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
-            if (file instanceof TFile) {
-                await this.projectManager.ensureFileCached(file);
-                new Notice('File cache refreshed');
-            }
-        });
-
         // Export
         const exportBtn = actions.createEl('button', { cls: 'pem-action-icon', title: 'Export' });
         setIcon(exportBtn, 'download');
-        exportBtn.addEventListener('click', () => {
+        exportBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
             if (file instanceof TFile) {
                 void this.exporter.export(file, 'standalone', this.plugin.settings.defaultExportFormat);
+            }
+        });
+
+        fileRow.addEventListener('click', async () => {
+            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+            if (file instanceof TFile) {
+                const leaf = this.app.workspace.getLeaf(false);
+                await leaf.openFile(file);
             }
         });
     }
 
     private renderRecentItems(container: HTMLElement, activeView: MarkdownView | null): void {
         const recentFiles = (this.plugin.settings.recentFiles || []).slice(0, 5);
-        
+
         if (recentFiles.length === 0) {
             container.createEl('div', { text: 'No recent files processed', cls: 'pem-no-data' });
             return;
@@ -189,7 +213,7 @@ export class ExportPanelModule extends BasePanelModule {
             const info = itemEl.createDiv('pem-project-info');
             info.createDiv({ text: `📄 ${path.split('/').pop() || path}`, cls: 'pem-project-name' });
             info.createDiv({ text: path, cls: 'pem-project-path' });
-            
+
             itemEl.addEventListener('click', async () => {
                 const file = this.app.vault.getAbstractFileByPath(path);
                 if (file instanceof TFile) {
@@ -221,23 +245,34 @@ export class ExportPanelModule extends BasePanelModule {
             info.createDiv({ text: project.path, cls: 'pem-project-path' });
 
             const actions = projectEl.createDiv('pem-project-actions');
-            const { setIcon } = require('obsidian');
+            
 
-            // Rebuild Icon
-            const rebuildBtn = actions.createEl('button', { cls: 'pem-action-icon', title: 'Rebuild Index' });
-            setIcon(rebuildBtn, 'refresh-cw');
-            rebuildBtn.addEventListener('click', async (e) => {
+            // Rescan Icon (Structure)
+            const rescanBtn = actions.createEl('button', { cls: 'pem-action-icon', title: 'Rescan Structure' });
+            setIcon(rescanBtn, 'search');
+            rescanBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                await this.projectManager.forceReload();
-                new Notice(`Index rebuilt for ${project.name}`);
+                await this.projectManager.rescanProject(project.path);
+                new Notice(`Structure rescanned for ${project.name}`);
+                this.renderContent(activeView);
+            });
+
+            // Reindex Icon (Content)
+            const reindexBtn = actions.createEl('button', { cls: 'pem-action-icon', title: 'Reindex Content' });
+            setIcon(reindexBtn, 'refresh-cw');
+            reindexBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await this.projectManager.reindexProject(project.path);
+                new Notice(`Content reindexed for ${project.name}`);
+                this.renderContent(activeView);
             });
 
             // Pin Icon (Exclusive)
             const pinBtn = actions.createEl('button', {
-                cls: isPinned ? 'pem-pin-btn is-active' : 'pem-pin-btn',
+                cls: isPinned ? 'pem-action-icon is-active' : 'pem-action-icon',
                 title: isPinned ? 'Unpin project' : 'Pin project'
             });
-            pinBtn.innerHTML = isPinned ? '📍' : '📌';
+            setIcon(pinBtn, isPinned ? 'pin-off' : 'pin');
             pinBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 if (isPinned) {
@@ -273,7 +308,7 @@ export class ExportPanelModule extends BasePanelModule {
             // --- Inline Export Form ---
             if (isExpanded) {
                 const exportForm = projectEl.createDiv('pem-inline-export-form');
-                
+
                 let localType: ExportType = 'article';
                 let localFormat: string = 'pdf';
 

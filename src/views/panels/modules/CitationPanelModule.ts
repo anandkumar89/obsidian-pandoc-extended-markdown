@@ -1,4 +1,4 @@
-import { MarkdownView, TFile } from 'obsidian';
+import { MarkdownView, TFile, setIcon } from 'obsidian';
 import { BasePanelModule } from './BasePanelModule';
 import { CSS_CLASSES, MESSAGES } from '../../../core/constants';
 import { CitationEntry, extractCitations } from '../../../shared/extractors/citationExtractor';
@@ -25,7 +25,6 @@ export class CitationPanelModule extends BasePanelModule {
     displayName = 'Citations';
     icon = 'quote';
 
-    private showProjectCitations = false;
     private sortingOrder: SortingOrder = 'alphabetical';
     private localCitations: CitationEntry[] = [];
     private citationInfoMap: Map<string, CitationData> = new Map();
@@ -39,10 +38,21 @@ export class CitationPanelModule extends BasePanelModule {
         this.localCitations = extractCitations(content);
         const pm = LongformProjectManager.getInstance();
         
-        // Sync map with global cache
-        this.localCitations.forEach(c => {
-            const meta = pm.getCitationMetadata(c.citekey);
-            if (meta) this.citationInfoMap.set(c.citekey, meta);
+        // Sync map with global cache for all citekeys (local + project-wide)
+        const citekeys = new Set<string>();
+        this.localCitations.forEach(c => citekeys.add(c.citekey));
+        
+        const activeFile = this.plugin.app.workspace.getActiveFile();
+        const pinnedPath = pm.getPinnedProjectPath();
+        const filePath = activeFile?.path || pinnedPath || '';
+        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        if (isInProject) {
+            pm.getProjectCitations(filePath).forEach(c => citekeys.add(c.citekey));
+        }
+
+        citekeys.forEach(k => {
+            const meta = pm.getCitationMetadata(k);
+            if (meta) this.citationInfoMap.set(k, meta);
         });
         
         void this.loadCitationInfo();
@@ -57,10 +67,12 @@ export class CitationPanelModule extends BasePanelModule {
         
         const pm = LongformProjectManager.getInstance();
         const activeFile = this.plugin.app.workspace.getActiveFile();
-        if (activeFile && pm.isFileInProject(activeFile.path)) {
-            pm.getAllCitationCitekeys().forEach(k => citekeys.add(k));
+        const pinnedPath = pm.getPinnedProjectPath();
+        const filePath = activeFile?.path || pinnedPath || '';
+        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        if (isInProject) {
+            pm.getProjectCitations(filePath).forEach(c => citekeys.add(c.citekey));
         }
-
 
         const keysToFetch = Array.from(citekeys).filter(k => {
             if (this.citationInfoMap.has(k)) return false;
@@ -80,8 +92,16 @@ export class CitationPanelModule extends BasePanelModule {
             // Fetch detailed info
             // IDLibID is [number, number] (itemID, libraryID). 
             // We'll default to library 1 for now as getItemIDsFromCitekey doesn't provide it.
-            const ids: [number, number][] = Object.values(itemIds).map(id => [id, 1]);
-            if (ids.length === 0) return;
+            const ids: [number, number][] = Object.values(itemIds).map((id: any) => [id, 1]);
+            if (ids.length === 0) {
+                // Mark all keysToFetch as notFound if no item IDs could be resolved
+                for (const key of keysToFetch) {
+                    this.citationInfoMap.set(key, { notFound: true });
+                }
+                const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+                if (activeView) void this.updateContent(activeView);
+                return;
+            }
             
             const items = await zoteroAPI.getDocItems(ids);
             
@@ -90,12 +110,18 @@ export class CitationPanelModule extends BasePanelModule {
             const zoteroDataDir = zotlit?.settings?.zoteroDataDir || (require('os').homedir() + '/Zotero');
             const pathUtils = require('path');
 
+            // Build a reverse mapping of itemId -> citekey from the itemIds object
+            const itemIdToCitekey = new Map<number, string>();
+            for (const [key, id] of Object.entries(itemIds)) {
+                itemIdToCitekey.set(id as number, key);
+            }
+
             // Map back by citekey
             const fetchedCitekeys = new Set<string>();
             for (const item of items) {
                 if (!item) continue;
                 
-                const citekey = item.citekey as string;
+                const citekey = (item.citekey as string) || itemIdToCitekey.get(item.itemID);
                 if (!citekey) continue;
                 fetchedCitekeys.add(citekey);
                 
@@ -168,56 +194,29 @@ export class CitationPanelModule extends BasePanelModule {
     }
 
     renderActions(actionsEl: HTMLElement, activeView: MarkdownView | null): void {
-        const filePath = activeView?.file?.path;
-        const pm = LongformProjectManager.getInstance();
-        const isInProject = filePath ? pm.isFileInProject(filePath) : false;
-
-        if (!isInProject) return;
-
-        const projectBtn = actionsEl.createEl('button', {
-            cls: `pem-toggle-btn ${this.showProjectCitations ? 'is-active' : ''}`,
-            attr: { 'aria-label': 'Show all project citations' }
-        });
-        projectBtn.createSpan({ text: '📁', cls: 'pem-toggle-icon' });
-        projectBtn.addEventListener('click', () => {
-            this.showProjectCitations = !this.showProjectCitations;
-            if (activeView) void this.updateContent(activeView);
-            actionsEl.empty();
-            this.renderActions(actionsEl, activeView);
-        });
-
-        const sortBtn = actionsEl.createEl('button', {
-            cls: 'pem-toggle-btn',
+        const sortBtn = actionsEl.createDiv({
+            cls: 'pem-panel-tab',
             attr: { 'aria-label': this.sortingOrder === 'alphabetical' ? 'Sort by occurrence' : 'Sort alphabetically' }
         });
-        sortBtn.createSpan({ text: this.sortingOrder === 'alphabetical' ? 'AZ' : '123', cls: 'pem-toggle-icon' });
+        setIcon(sortBtn, this.sortingOrder === 'alphabetical' ? 'sort-asc' : 'sort-desc');
         sortBtn.addEventListener('click', () => {
             this.sortingOrder = this.sortingOrder === 'alphabetical' ? 'occurrence' : 'alphabetical';
             if (activeView) void this.updateContent(activeView);
             actionsEl.empty();
             this.renderActions(actionsEl, activeView);
         });
-
-        const refreshBtn = actionsEl.createEl('button', {
-            cls: 'pem-toggle-btn',
-            attr: { 'aria-label': 'Refresh citation info' }
-        });
-        refreshBtn.createSpan({ text: '↻', cls: 'pem-toggle-icon' });
-        refreshBtn.addEventListener('click', () => {
-            this.citationInfoMap.clear();
-            void this.loadCitationInfo();
-        });
     }
 
     protected renderContent(activeView: MarkdownView | null): void {
-        const filePath = activeView?.file?.path;
         const pm = LongformProjectManager.getInstance();
         const pinnedPath = pm.getPinnedProjectPath();
+        const filePath = activeView?.file?.path || pinnedPath || '';
         const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
 
         let citekeys: string[] = [];
-        if (isInProject && (this.showProjectCitations || !filePath)) {
-            citekeys = pm.getAllCitationCitekeys();
+
+        if (isInProject) {
+            citekeys = Array.from(new Set(pm.getProjectCitations(filePath).map(c => c.citekey)));
         } else {
             citekeys = Array.from(new Set(this.localCitations.map(c => c.citekey)));
         }
@@ -237,8 +236,8 @@ export class CitationPanelModule extends BasePanelModule {
             // Sort by first occurrence
             const firstOcc = new Map<string, number>();
             citekeys.forEach(k => {
-                const occurrences = isInProject && (this.showProjectCitations || !filePath)
-                    ? pm.getCitationOccurrences(k)
+                const occurrences = isInProject
+                    ? pm.getProjectCitations(filePath).filter(c => c.citekey === k)
                     : this.localCitations.filter(c => c.citekey === k);
                 if (occurrences.length > 0) {
                     firstOcc.set(k, occurrences[0].lineNumber);
@@ -261,8 +260,8 @@ export class CitationPanelModule extends BasePanelModule {
         if (!container) return;
 
         for (const citekey of citekeys) {
-            const occurrences = isInProject && (this.showProjectCitations || !filePath)
-                ? pm.getCitationOccurrences(citekey)
+            const occurrences = isInProject
+                ? pm.getProjectCitations(filePath).filter(c => c.citekey === citekey)
                 : this.localCitations.filter(c => c.citekey === citekey);
             
             this.renderCitationItem(container, citekey, occurrences, activeView);
@@ -278,9 +277,8 @@ export class CitationPanelModule extends BasePanelModule {
         // Inline layout: [Icon] [Citekey]: [Title] ([Year])
         
         // Icon
-        const iconName = this.getZoteroIcon(info?.type);
         const iconEl = mainInfoEl.createSpan({ cls: 'pem-citation-type-icon' });
-        this.renderIcon(iconEl, iconName);
+        this.renderIcon(iconEl, info?.type);
 
         const textEl = mainInfoEl.createSpan({ cls: 'pem-citation-text' });
         textEl.createSpan({ text: citekey, cls: 'pem-citation-citekey' });
@@ -305,9 +303,39 @@ export class CitationPanelModule extends BasePanelModule {
         });
     }
 
-    private renderIcon(el: HTMLElement, iconName: string): void {
-        const { setIcon } = require('obsidian');
-        setIcon(el, iconName);
+    private renderIcon(el: HTMLElement, type?: string): void {
+        if (type === 'journalArticle') {
+            el.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+  <polyline points="14 2 14 8 20 8"></polyline>
+  <line x1="16" y1="13" x2="8" y2="13"></line>
+  <line x1="16" y1="17" x2="8" y2="17"></line>
+  <polyline points="10 9 9 9 8 9"></polyline>
+</svg>`;
+        } else if (type === 'book') {
+            el.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="rgba(37, 99, 235, 0.12)" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 3h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7" fill="none" opacity="0.7"></path>
+  <path d="M4 19.5v-13A2.5 2.5 0 0 1 6.5 4H18v15H6.5a2.5 2.5 0 0 0-2.5 2.5Z"></path>
+  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H18"></path>
+</svg>`;
+        } else if (type === 'conferencePaper') {
+            el.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="rgba(194, 120, 71, 0.12)" stroke="#c27847" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M6 6l12 0l2 4l-16 0z"></path>
+  <path d="M10 10l0 10l4 0l0-10"></path>
+  <line x1="6" y1="20" x2="18" y2="20"></line>
+  <line x1="13" y1="6" x2="15" y2="3" stroke="#4b5563" stroke-width="1.5"></line>
+</svg>`;
+        } else if (type === 'thesis') {
+            el.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M2 10L12 5l10 5-10 5z" stroke="#4b5563" stroke-width="2" fill="rgba(75, 85, 99, 0.12)"></path>
+  <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" stroke="#4b5563" stroke-width="2" fill="rgba(75, 85, 99, 0.12)"></path>
+  <path d="M12 10c0 1-1.5 3-1.5 5v2" stroke="#ea580c" stroke-width="2"></path>
+  <circle cx="10.5" cy="17" r="1.5" fill="#ea580c" stroke="#ea580c" stroke-width="1"></circle>
+</svg>`;
+        } else {
+            const iconName = this.getZoteroIcon(type);
+            setIcon(el, iconName);
+        }
     }
 
     private getZoteroIcon(type?: string): string {
@@ -346,6 +374,7 @@ export class CitationPanelModule extends BasePanelModule {
                 activeView
             });
             workspace.revealLeaf(leaf);
+            workspace.setActiveLeaf(leaf, { focus: true });
         }
     }
 

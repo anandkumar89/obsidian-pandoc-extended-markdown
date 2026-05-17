@@ -119,7 +119,7 @@ export class FencedDivReferenceSuggest extends EditorSuggest<FencedDivSuggestion
         // Local labels
         for (const reference of labels.values()) {
             if (!reference.label) continue;
-            
+
             if (query && !fuzzyMatch(query, reference.label) && !fuzzyMatch(query, reference.displayName)) {
                 continue;
             }
@@ -134,26 +134,26 @@ export class FencedDivReferenceSuggest extends EditorSuggest<FencedDivSuggestion
             });
         }
 
-        // Global labels
-        for (const reference of LongformProjectManager.getInstance().getAllReferences()) {
-            if (!reference.label || seenLabels.has(reference.label)) continue;
-            if (reference.filePath === activeFilePath) continue;
+        // Global references (Combined: Divs, Equations, Figures)
+        for (const ref of LongformProjectManager.getInstance().getAllReferences(activeFilePath)) {
+            if (!ref.label || seenLabels.has(ref.label)) continue;
+            if (ref.filePath === activeFilePath) continue;
 
-            if (query && !fuzzyMatch(query, reference.label) && !fuzzyMatch(query, reference.displayName)) {
+            if (query && !fuzzyMatch(query, ref.label) && !fuzzyMatch(query, ref.displayName)) {
                 continue;
             }
 
             let fileTag = 'Other';
-            if (reference.filePath) {
-                const parts = reference.filePath.split('/');
+            if (ref.filePath) {
+                const parts = ref.filePath.split('/');
                 fileTag = parts[parts.length - 1].replace('.md', '');
             }
 
             suggestions.push({
-                label: reference.label,
-                displayName: reference.displayTitle || reference.displayName,
-                previewText: this.createPreviewText(reference.content),
-                lineNumber: reference.lineNumber,
+                label: ref.label,
+                displayName: ref.displayName,
+                previewText: this.createPreviewText(ref.previewText),
+                lineNumber: ref.lineNumber,
                 isExternal: true,
                 fileTag
             });
@@ -164,7 +164,7 @@ export class FencedDivReferenceSuggest extends EditorSuggest<FencedDivSuggestion
         for (const reference of localEquations) {
             if (!reference.label) continue;
             const fullLabel = `eq:${reference.label}`;
-            
+
             if (query && !fuzzyMatch(query, fullLabel)) continue;
 
             seenLabels.add(fullLabel);
@@ -174,31 +174,6 @@ export class FencedDivReferenceSuggest extends EditorSuggest<FencedDivSuggestion
                 previewText: this.createPreviewText(reference.content),
                 lineNumber: reference.lineNumber,
                 isExternal: false
-            });
-        }
-
-        // Global Equations
-        for (const reference of LongformProjectManager.getInstance().getAllEquationReferences()) {
-            if (!reference.label) continue;
-            const fullLabel = `eq:${reference.label}`;
-            if (seenLabels.has(fullLabel)) continue;
-            if (reference.filePath === activeFilePath) continue;
-
-            if (query && !fuzzyMatch(query, fullLabel)) continue;
-
-            let fileTag = 'Other';
-            if (reference.filePath) {
-                const parts = reference.filePath.split('/');
-                fileTag = parts[parts.length - 1].replace('.md', '');
-            }
-
-            suggestions.push({
-                label: fullLabel,
-                displayName: `(${fullLabel})`,
-                previewText: this.createPreviewText(reference.content),
-                lineNumber: reference.lineNumber,
-                isExternal: true,
-                fileTag
             });
         }
 
@@ -215,28 +190,6 @@ export class FencedDivReferenceSuggest extends EditorSuggest<FencedDivSuggestion
                 previewText: fig.description || fig.imagePath,
                 lineNumber: fig.lineNumber,
                 isExternal: false
-            });
-        }
-
-        // Global Figures
-        for (const fig of LongformProjectManager.getInstance().getAllFigureReferences()) {
-            if (!fig.label || seenLabels.has(fig.label)) continue;
-            if (fig.filePath === activeFilePath) continue;
-            if (query && !fuzzyMatch(query, fig.label)) continue;
-
-            let fileTag = 'Other';
-            if (fig.filePath) {
-                const parts = fig.filePath.split('/');
-                fileTag = parts[parts.length - 1].replace('.md', '');
-            }
-
-            suggestions.push({
-                label: fig.label,
-                displayName: fig.displayTitle || fig.label,
-                previewText: fig.description || fig.imagePath,
-                lineNumber: fig.lineNumber,
-                isExternal: true,
-                fileTag
             });
         }
 

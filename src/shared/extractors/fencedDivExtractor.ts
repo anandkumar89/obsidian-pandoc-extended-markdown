@@ -95,7 +95,8 @@ export function extractFencedDivsFromDoc(
                 position: { line: lineNum - 1, ch: 0 },
                 contentPosition: { line: lineNum - 1, ch: 0 },
                 contentLines: [],
-                openingFence: opening.fence
+                openingFence: opening.fence,
+                inlineTitle: opening.keyValues.get('title') || opening.inlineTitle || undefined
             };
 
             items.push(activeDiv);

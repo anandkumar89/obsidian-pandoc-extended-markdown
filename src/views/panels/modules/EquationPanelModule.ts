@@ -13,8 +13,6 @@ export class EquationPanelModule extends BasePanelModule {
     displayName = 'Equations';
     icon = 'sigma';
 
-    private showProjectBlocks = false;
-
     private equationItems: EquationPanelItem[] = [];
 
     protected cleanupModuleData(): void {
@@ -25,25 +23,8 @@ export class EquationPanelModule extends BasePanelModule {
         this.equationItems = extractEquations(content);
     }
 
-    /** Render module-specific action buttons into the top bar */
     renderActions(actionsEl: HTMLElement, activeView: MarkdownView | null): void {
-        const filePath = activeView?.file?.path;
-        const pm = LongformProjectManager.getInstance();
-        const isInProject = filePath ? pm.isFileInProject(filePath) : false;
-
-        if (!isInProject) return;
-
-        const projectBtn = actionsEl.createEl('button', {
-            cls: `pem-toggle-btn ${this.showProjectBlocks ? 'is-active' : ''}`,
-            attr: { 'aria-label': 'Show all project equations' }
-        });
-        projectBtn.createSpan({ text: '📁', cls: 'pem-toggle-icon' });
-        projectBtn.addEventListener('click', () => {
-            this.showProjectBlocks = !this.showProjectBlocks;
-            if (activeView) void this.updateContent(activeView);
-            actionsEl.empty();
-            this.renderActions(actionsEl, activeView);
-        });
+        // Global project/preview toggles are now in ListPanelView top bar.
     }
 
     protected renderContent(activeView: MarkdownView | null): void {
@@ -54,7 +35,9 @@ export class EquationPanelModule extends BasePanelModule {
 
         let itemsToRender: EquationPanelItem[] = [];
 
-        if (isInProject && this.showProjectBlocks && filePath) {
+        const showProject = this.plugin.settings.showProjectWideItems;
+
+        if (isInProject && (showProject || !activeView)) {
             itemsToRender = pm.getProjectEquations(filePath);
         } else {
             itemsToRender = this.equationItems;
@@ -80,7 +63,7 @@ export class EquationPanelModule extends BasePanelModule {
         this.equationItems = [];
     }
 
-    private renderEquationItemsList(activeView: MarkdownView, items: EquationPanelItem[]): void {
+    private renderEquationItemsList(activeView: MarkdownView | null, items: EquationPanelItem[]): void {
         if (!this.containerEl) return;
 
         if (items.length === 0) {
@@ -110,8 +93,10 @@ export class EquationPanelModule extends BasePanelModule {
         setupLabelClickHandler(tagEl, referenceLabel, this.abortController?.signal);
 
         // Row 2: rendered math preview — item.content already includes $$
-        const previewEl = itemEl.createEl('div', { cls: 'pem-eq-preview' });
-        renderContentWithMath(previewEl, item.content, this.plugin.app, this.plugin, this.currentContext);
+        if (this.plugin.settings.showPanelPreviews) {
+            const previewEl = itemEl.createEl('div', { cls: 'pem-eq-preview' });
+            renderContentWithMath(previewEl, item.content, this.plugin.app, this.plugin, this.currentContext);
+        }
 
         // Setup cmd+hover preview
         setupRenderedHoverPreview(itemEl, item.content, this.plugin.app, this.plugin, this.currentContext, undefined, this.abortController?.signal);
@@ -122,7 +107,7 @@ export class EquationPanelModule extends BasePanelModule {
     private setupContentClickHandler(
         element: HTMLElement,
         item: EquationPanelItem,
-        activeView: MarkdownView
+        activeView: MarkdownView | null
     ): void {
         const clickHandler = () => {
             try {

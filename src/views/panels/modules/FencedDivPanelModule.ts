@@ -16,8 +16,6 @@ export class FencedDivPanelModule extends BasePanelModule {
     displayName = 'Fenced Divs';
     icon = ICONS.FENCED_DIV_SVG;
 
-    private showProjectBlocks = false;
-    private showPreviews = true;
     private lastActiveView: MarkdownView | null = null;
 
     private fencedDivItems: FencedDivPanelItem[] = [];
@@ -30,38 +28,9 @@ export class FencedDivPanelModule extends BasePanelModule {
         this.fencedDivItems = extractFencedDivs(content, this.plugin.settings);
     }
 
-    /** Render module-specific action buttons into the top bar */
     renderActions(actionsEl: HTMLElement, activeView: MarkdownView | null): void {
-        const filePath = activeView?.file?.path;
-        const pm = LongformProjectManager.getInstance();
-        const isInProject = filePath ? pm.isFileInProject(filePath) : false;
-
-        const previewBtn = actionsEl.createEl('button', {
-            cls: `pem-toggle-btn ${this.showPreviews ? 'is-active' : ''}`,
-            attr: { 'aria-label': 'Toggle previews' }
-        });
-        previewBtn.createSpan({ text: '👁', cls: 'pem-toggle-icon' });
-        previewBtn.addEventListener('click', () => {
-            this.showPreviews = !this.showPreviews;
-            if (activeView) this.updateContent(activeView);
-            // Re-render actions to update active state
-            actionsEl.empty();
-            this.renderActions(actionsEl, activeView);
-        });
-
-        if (isInProject) {
-            const projectBtn = actionsEl.createEl('button', {
-                cls: `pem-toggle-btn ${this.showProjectBlocks ? 'is-active' : ''}`,
-                attr: { 'aria-label': 'Show all project blocks' }
-            });
-            projectBtn.createSpan({ text: '📁', cls: 'pem-toggle-icon' });
-            projectBtn.addEventListener('click', () => {
-                this.showProjectBlocks = !this.showProjectBlocks;
-                if (activeView) this.updateContent(activeView);
-                actionsEl.empty();
-                this.renderActions(actionsEl, activeView);
-            });
-        }
+        // Global project/preview toggles are now in ListPanelView top bar.
+        // Module-specific actions can go here.
     }
 
     protected renderContent(activeView: MarkdownView | null): void {
@@ -73,8 +42,10 @@ export class FencedDivPanelModule extends BasePanelModule {
 
         let itemsToRender: FencedDivPanelItem[] = [];
 
-        if (isInProject && this.showProjectBlocks && filePath) {
-            const globalEntries = pm.getProjectEntries(filePath);
+        const showProject = this.plugin.settings.showProjectWideItems;
+
+        if (isInProject && (showProject || !activeView)) {
+            const globalEntries = pm.getProjectFencedDivs(filePath);
             itemsToRender = globalEntries.map(e => ({
                 title: e.displayTitle || e.displayName,
                 content: e.content,
@@ -127,7 +98,7 @@ export class FencedDivPanelModule extends BasePanelModule {
         this.fencedDivItems = [];
     }
 
-    private renderFencedDivItemsList(activeView: MarkdownView, items: FencedDivPanelItem[]): void {
+    private renderFencedDivItemsList(activeView: MarkdownView | null, items: FencedDivPanelItem[]): void {
         if (!this.containerEl) return;
 
         if (items.length === 0) {
@@ -169,7 +140,7 @@ export class FencedDivPanelModule extends BasePanelModule {
         }
 
         // Row 2: preview (if enabled)
-        if (this.showPreviews) {
+        if (this.plugin.settings.showPanelPreviews) {
             const contentEl = itemEl.createEl('div', {
                 cls: CSS_CLASSES.FENCED_DIV_PANEL_CONTENT
             });
@@ -192,7 +163,7 @@ export class FencedDivPanelModule extends BasePanelModule {
     private setupContentClickHandler(
         element: HTMLElement,
         item: FencedDivPanelItem,
-        activeView: MarkdownView
+        activeView: MarkdownView | null
     ): void {
         const clickHandler = () => {
             try {

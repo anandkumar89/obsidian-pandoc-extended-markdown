@@ -32,12 +32,14 @@ export interface PandocExtendedMarkdownSettings {
     exportOutputDirectory: string;
     defaultExportFormat: string;
     unnumberedClasses: string[];
-    showTOCFileBreaks: boolean;
+    tocViewMode: 'toc' | 'toc-rail' | 'rail-only';
     pinnedProjectPath: string | null;
     pinnedFilePath: string | null;
     knownProjectPaths: string[];
     recentFiles: string[];
     recentProjects: string[];
+    showProjectWideItems: boolean;
+    showPanelPreviews: boolean;
 }
 
 export const DEFAULT_SETTINGS: PandocExtendedMarkdownSettings = {
@@ -49,12 +51,14 @@ export const DEFAULT_SETTINGS: PandocExtendedMarkdownSettings = {
     exportOutputDirectory: 'Exports',
     defaultExportFormat: 'pdf',
     unnumberedClasses: ['proof'],
-    showTOCFileBreaks: true,
+    tocViewMode: 'toc-rail',
     pinnedProjectPath: null,
     pinnedFilePath: null,
     knownProjectPaths: [],
     recentFiles: [],
-    recentProjects: []
+    recentProjects: [],
+    showProjectWideItems: false,
+    showPanelPreviews: true
 };
 
 export type SyntaxFeatureSettingKey = 'enableFencedDivs' | 'enableHeadingNumbering' | 'enableCitations';
@@ -79,11 +83,13 @@ export function normalizeSettings(
         exportOutputDirectory: sourceSettings.exportOutputDirectory ?? DEFAULT_SETTINGS.exportOutputDirectory,
         defaultExportFormat: sourceSettings.defaultExportFormat ?? DEFAULT_SETTINGS.defaultExportFormat,
         unnumberedClasses: sourceSettings.unnumberedClasses ?? [...DEFAULT_SETTINGS.unnumberedClasses],
-        showTOCFileBreaks: sourceSettings.showTOCFileBreaks ?? DEFAULT_SETTINGS.showTOCFileBreaks,
+        tocViewMode: sourceSettings.tocViewMode ?? DEFAULT_SETTINGS.tocViewMode,
         pinnedProjectPath: sourceSettings.pinnedProjectPath ?? DEFAULT_SETTINGS.pinnedProjectPath,
         pinnedFilePath: sourceSettings.pinnedFilePath ?? DEFAULT_SETTINGS.pinnedFilePath,
         knownProjectPaths: sourceSettings.knownProjectPaths ?? [...DEFAULT_SETTINGS.knownProjectPaths],
         recentFiles: sourceSettings.recentFiles ?? [...DEFAULT_SETTINGS.recentFiles],
-        recentProjects: sourceSettings.recentProjects ?? [...DEFAULT_SETTINGS.recentProjects]
+        recentProjects: sourceSettings.recentProjects ?? [...DEFAULT_SETTINGS.recentProjects],
+        showProjectWideItems: sourceSettings.showProjectWideItems ?? DEFAULT_SETTINGS.showProjectWideItems,
+        showPanelPreviews: sourceSettings.showPanelPreviews ?? DEFAULT_SETTINGS.showPanelPreviews
     };
 }

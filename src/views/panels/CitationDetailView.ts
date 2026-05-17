@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, MarkdownView, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, MarkdownView, TFile, setIcon } from 'obsidian';
 import { CitationEntry } from '../../shared/extractors/citationExtractor';
 
 export const VIEW_TYPE_CITATION_DETAIL = 'pem-citation-detail-view';
@@ -56,7 +56,6 @@ export class CitationDetailView extends ItemView {
                 cls: 'pem-zotero-icon-btn',
                 attr: { 'aria-label': 'Open in Zotero' }
             });
-            const { setIcon } = require('obsidian');
             setIcon(zoteroIconBtn, 'external-link');
             zoteroIconBtn.addEventListener('click', (e) => {
                 e.stopPropagation();

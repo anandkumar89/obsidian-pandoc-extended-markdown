@@ -565,6 +565,41 @@
     box-shadow: none !important;
 }
 
+/* ═══ Component: Button Group ═══ */
+.pem-button-group {
+    display: flex;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.pem-group-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.pem-group-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.pem-group-btn.is-active {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-weight: 500;
+}
+
 /* ═══ Figure Panel ═══ */
 .pem-figure-panel-container {
     padding: 8px;
@@ -1594,59 +1629,148 @@ td.pem-footnote-panel-content:hover {
 
 /* ═══ Redesigned Panel Top Bar ═══ */
 
-.pem-panel-right-actions {
-    display: flex;
-    align-items: center;
-    gap: 0;
-}
-
-
 .pem-panel-top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 4px;
+    padding: 4px 6px;
     margin-bottom: 0;
-    gap: 2px;
+    gap: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.pem-module-actions-container {
+.pem-panel-left-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.pem-panel-tabs {
+    display: flex;
+    gap: 1px;
+    background-color: var(--background-modifier-hover);
+    border-radius: 6px;
+    padding: 2px;
+    align-items: center;
+}
+
+.pem-panel-tabs .pem-panel-tab {
+    padding: 3px 6px;
+    margin: 0;
+    border-radius: 4px;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Center icons at bottom */
-    gap: 24px;
-    /* More space between icons */
-    padding: 12px 8px;
-    margin-top: auto;
-    /* Push to bottom */
+    cursor: pointer;
 }
 
-.pem-module-actions-container button {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    opacity: 0.6;
-    transition: all 0.2s;
-    height: auto !important;
-    width: auto !important;
+.pem-panel-tabs .pem-panel-tab:hover {
+    color: var(--text-normal);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.pem-panel-tabs .pem-panel-tab.is-active {
+    color: var(--text-normal);
+    background-color: var(--background-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.pem-panel-contextual-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pem-panel-toggle-actions,
+.pem-panel-module-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pem-panel-toggle-actions.is-hidden {
+    display: none !important;
+}
+
+.pem-panel-contextual-actions .pem-panel-tab {
+    padding: 4px;
+    margin: 0;
+    border-radius: 5px;
+    color: var(--text-muted);
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.pem-panel-contextual-actions .pem-panel-tab:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.pem-panel-contextual-actions .pem-panel-tab.is-active {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border);
+}
+
+.pem-panel-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.pem-panel-right-actions .pem-panel-tab {
+    padding: 4px;
+    margin: 0;
+    border-radius: 5px;
+    color: var(--text-muted);
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.pem-panel-right-actions .pem-panel-tab:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.pem-panel-right-actions .pem-panel-tab.is-active {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border);
+}
+
+.pem-panel-tab.is-hidden {
+    display: none !important;
+}
+
+.pem-tab-icon {
+    pointer-events: none;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.pem-module-actions-container button:hover {
-    opacity: 1;
-    background: transparent !important;
+.pem-tab-icon svg {
+    width: 16px;
+    height: 16px;
 }
 
-.pem-module-actions-container button.is-active {
-    opacity: 1;
-    color: var(--text-accent) !important;
-}
-
-
+/* ═══ Panel Search Bar ═══ */
 
 .pem-panel-search-bar {
     padding: 4px 8px;
@@ -1699,52 +1823,6 @@ td.pem-footnote-panel-content:hover {
 
 .pem-panel-search-input::placeholder {
     color: var(--text-muted);
-}
-
-.pem-panel-tabs {
-    display: flex;
-    gap: 0;
-}
-
-.pem-panel-actions {
-    display: flex;
-    gap: 4px;
-    margin-left: 4px;
-    flex-shrink: 0;
-}
-
-.pem-panel-tab {
-    padding: 6px 8px;
-    cursor: pointer;
-    font-size: 11px;
-    color: var(--text-muted);
-    background: transparent;
-    border: none;
-    transition: all 0.1s ease;
-    user-select: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    margin: 2px 1px;
-}
-
-.pem-panel-tab:hover {
-    color: var(--text-normal);
-}
-
-.pem-panel-tab.is-active {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
-}
-
-.pem-tab-icon {
-    pointer-events: none;
-}
-
-.pem-tab-icon svg {
-    width: 18px;
-    height: 18px;
 }
 
 .pem-panel-action-btn {
@@ -1826,48 +1904,162 @@ td.pem-footnote-panel-content:hover {
 
 /* Consolidated into lower definition */
 
-/* ═══ TOC File Breaks ═══ */
-.pem-toc-file-break {
-    margin: 8px 12px;
-    border-top: 1px dashed var(--background-modifier-border);
+/* ═══ TOC Side Rail & Scene Management ═══ */
+
+.pem-toc-container.has-rail {
+    padding-left: 0;
+}
+
+.pem-toc-file-group {
+    display: flex;
+    flex-direction: row;
     position: relative;
-    height: 1px;
+    border-top: 2px solid transparent;
+    transition: border 0.1s ease;
+}
+
+.pem-toc-rail-container {
+    width: 20px;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+/* In rail-only mode, expand to accommodate the control buttons */
+.pem-toc-container.is-rail-only .pem-toc-rail-container {
+    width: 64px;
+}
+
+.pem-rail-indent-btns {
+    display: flex;
+    flex-direction: row;
+    gap: 1px;
+    flex-shrink: 0;
+}
+
+.pem-rail-indent-btn {
+    background: none;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 3px;
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 1px 3px;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+
+.pem-rail-indent-btn:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.pem-toc-file-rail {
+    position: absolute;
+    top: 6px;
+    bottom: 4px;
+    left: 6px;
+    width: 8px;
+    background-color: var(--background-modifier-border);
+    border-radius: 4px;
+    cursor: grab;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-}
-
-.pem-toc-file-break:hover {
-    border-top-color: var(--text-accent);
-}
-
-.pem-toc-file-add-btn {
-    position: absolute;
-    background: var(--background-primary);
-    padding: 2px 8px;
-    font-size: 10px;
-    color: var(--text-muted);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 12px;
-    cursor: pointer;
-    opacity: 0;
-    transform: translateY(0);
-    transition: all 0.2s ease;
-    white-space: nowrap;
     z-index: 10;
 }
 
-.pem-toc-file-break:hover .pem-toc-file-add-btn {
-    opacity: 1;
-    color: var(--text-accent);
-    border-color: var(--text-accent);
+.pem-toc-file-rail:hover {
+    width: 14px;
+    left: 3px;
+    background-color: var(--interactive-accent);
+    box-shadow: 0 0 8px var(--interactive-accent);
 }
 
-.pem-toc-file-add-btn:hover {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent) !important;
-    border-color: var(--interactive-accent);
+.pem-toc-rail-name {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    font-size: 9px;
+    color: transparent;
+    pointer-events: none;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-height: 80%;
+    transition: color 0.2s ease;
+}
+
+.pem-toc-file-rail:hover .pem-toc-rail-name {
+    color: var(--text-on-accent);
+}
+
+.pem-toc-file-content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.pem-toc-drag-over {
+    border-top: 2px solid var(--interactive-accent) !important;
+}
+
+.pem-toc-folder-entry {
+    padding: 8px 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: var(--background-secondary-alt);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    margin-top: 8px;
+}
+
+.pem-toc-folder-title {
+    display: flex;
+    align-items: center;
+}
+
+.pem-toc-folder-title::before {
+    content: "📁";
+    margin-right: 6px;
+    font-size: 1.1em;
+}
+
+.is-dragging {
+    opacity: 0.4;
+}
+
+.pem-toc-scene-entry {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-normal);
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 4px;
+    margin: 2px 4px;
+}
+
+.pem-toc-scene-entry:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-accent);
+}
+
+.pem-toc-scene-entry.is-selected,
+.pem-toc-scene-entry:focus {
+    background-color: var(--nav-item-background-active);
+    color: var(--nav-item-color-active);
+    font-weight: bold;
+    outline: none;
+}
+
+.pem-toc-scene-title {
+    font-size: 0.95em;
 }
 
 .pem-block-header {
@@ -1895,7 +2087,6 @@ td.pem-footnote-panel-content:hover {
     font-weight: 600;
 }
 
-
 /* ═══ Export/Settings Panel Styles ═══ */
 
 .pem-panel-export-container .pem-panel-header {
@@ -1912,8 +2103,6 @@ td.pem-footnote-panel-content:hover {
     margin-top: 4px;
 }
 
-
-
 .pem-panel-export-form .setting-item-info {
     flex: 1;
 }
@@ -1927,13 +2116,6 @@ td.pem-footnote-panel-content:hover {
     font-size: 10.5px;
     color: var(--text-muted);
 }
-
-
-
-
-/* Consolidated into above */
-
-/* Consolidated into above */
 
 .pem-block-label {
     font-family: var(--font-monospace);
@@ -1990,7 +2172,6 @@ td.pem-footnote-panel-content:hover {
     font-size: 0.95em !important;
 }
 
-/* ═══ TOC Panel ═══ */
 .pem-toc-project-indicator {
     display: flex;
     align-items: center;
@@ -2439,8 +2620,9 @@ td.pem-footnote-panel-content:hover {
 }
 
 .pem-project-item.is-pinned {
-    border-color: var(--interactive-accent);
-    background: var(--background-primary-alt);
+    border-left: 3px solid var(--interactive-accent);
+    background: var(--background-modifier-hover);
+    border-radius: 2px 6px 6px 2px;
 }
 
 .pem-project-info {
@@ -2550,6 +2732,35 @@ td.pem-footnote-panel-content:hover {
     color: var(--text-muted);
     margin-bottom: 12px;
     padding-left: 4px;
+}
+
+.pem-mt-medium {
+    margin-top: 12px;
+}
+
+/* ═══ Plugin Settings Tab Grouping ═══ */
+.pem-settings-group {
+    background-color: var(--background-secondary-alt);
+    border-radius: 12px;
+    padding: 0;
+    margin: 12px 0 24px 0;
+    overflow: hidden;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.pem-settings-group .setting-item {
+    border-top: 1px solid var(--background-modifier-border);
+    padding: 14px 18px;
+    border-bottom: none;
+}
+
+.pem-settings-group .setting-item:first-child {
+    border-top: none;
+}
+
+.pem-settings-group .setting-item-heading {
+    background-color: transparent;
+    border-top: none;
 }
 
 .pem-add-project-container {
@@ -2672,10 +2883,6 @@ td.pem-footnote-panel-content:hover {
     margin-top: 8px;
 }
 
-.pem-file-row.is-pinned {
-    border-color: var(--text-accent);
-    background: var(--background-primary-alt);
-}
 
 /* ═══ Citation Item Styles ═══ */
 .pem-citation-panel-container {
@@ -2697,15 +2904,19 @@ td.pem-footnote-panel-content:hover {
 }
 
 .pem-citation-type-icon {
-    opacity: 0.6;
-    width: 14px;
+    opacity: 1;
+    width: 16px;
+    height: 16px;
     margin-right: 8px;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
 }
 
 .pem-citation-type-icon svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
 }
 
 .pem-citation-text {

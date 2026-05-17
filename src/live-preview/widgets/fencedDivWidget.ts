@@ -94,7 +94,8 @@ export class FencedDivReferenceWidget extends BaseWidget {
         pos?: number,
         private app?: App,
         private component?: Component,
-        public isValid: boolean = true
+        public isValid: boolean = true,
+        public filePath: string = ''
     ) {
         super(view, pos);
     }
@@ -140,10 +141,10 @@ export class FencedDivReferenceWidget extends BaseWidget {
                 const { LongformProjectManager } = require('../../core/state/longformProjectManager');
                 const pm = LongformProjectManager.getInstance();
                 
-                let globalRef = pm.getReference(this.label);
+                let globalRef = pm.getReference(this.label, this.filePath);
                 if (!globalRef && this.label.startsWith('eq:')) {
                     const tagLabel = this.label.substring(3);
-                    globalRef = pm.getEquationReference(tagLabel);
+                    globalRef = pm.getEquationReference(tagLabel, this.filePath);
                 }
                 
                 if (globalRef && globalRef.filePath) {
@@ -170,6 +171,7 @@ export class FencedDivReferenceWidget extends BaseWidget {
         return other.displayName === this.displayName &&
                other.label === this.label &&
                other.content === this.content &&
-               other.pos === this.pos;
+               other.pos === this.pos &&
+               other.filePath === this.filePath;
     }
 }

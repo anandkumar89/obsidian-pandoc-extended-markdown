@@ -82,10 +82,10 @@ export abstract class BasePanelModule implements PanelModule {
         this.containerEl.empty();
 
         const pm = LongformProjectManager.getInstance();
-        const pinnedPath = pm.getPinnedProjectPath();
+        const pinnedPath = pm.getPinnedProjectPath() || pm.getPinnedFilePath();
 
         if (!pinnedPath && (!activeView || !activeView.file)) {
-            this.showNoFileMessage();
+            void this.showNoFileMessage();
             return;
         }
 
@@ -95,13 +95,53 @@ export abstract class BasePanelModule implements PanelModule {
         this.renderContent(activeView);
     }
 
-    protected showNoFileMessage(): void {
+    protected async showNoFileMessage(): Promise<void> {
         if (!this.containerEl) return;
 
-        this.containerEl.createEl('div', {
-            text: MESSAGES.NO_ACTIVE_FILE,
-            cls: 'pem-no-data'
-        });
+        this.containerEl.empty();
+        
+        const welcomeEl = this.containerEl.createDiv('pem-panel-welcome');
+        welcomeEl.createEl('h3', { text: 'Academic Markdown' });
+        welcomeEl.createEl('p', { text: MESSAGES.NO_ACTIVE_FILE, cls: 'pem-no-data-msg' });
+
+        const pm = LongformProjectManager.getInstance();
+        const projects = await pm.findAllProjects();
+        const recentFiles = pm.getRecentFiles();
+
+        if (projects.length > 0) {
+            welcomeEl.createEl('div', { text: 'Registered Projects', cls: 'pem-section-title pem-mt-medium' });
+            const list = welcomeEl.createDiv('pem-panel-project-list');
+            for (const p of projects) {
+                const item = list.createDiv('pem-project-item');
+                const info = item.createDiv('pem-project-info');
+                info.createDiv({ text: `📁 ${p.name}`, cls: 'pem-project-name' });
+                info.createDiv({ text: p.path, cls: 'pem-project-path' });
+                
+                item.addEventListener('click', () => {
+                    pm.setPinnedProject(p.path);
+                    // refresh will be triggered by event
+                });
+            }
+        }
+
+        if (recentFiles.length > 0) {
+            welcomeEl.createEl('div', { text: 'Recent Files', cls: 'pem-section-title pem-mt-medium' });
+            const list = welcomeEl.createDiv('pem-panel-project-list');
+            for (const path of recentFiles.slice(0, 5)) {
+                const item = list.createDiv('pem-project-item');
+                const info = item.createDiv('pem-project-info');
+                info.createDiv({ text: `📄 ${path.split('/').pop() || path}`, cls: 'pem-project-name' });
+                info.createDiv({ text: path, cls: 'pem-project-path' });
+                
+                item.addEventListener('click', async () => {
+                    const file = this.plugin.app.vault.getAbstractFileByPath(path);
+                    if (file instanceof TFile) {
+                        const leaf = this.plugin.app.workspace.getLeaf(false);
+                        await leaf.openFile(file);
+                    }
+                });
+            }
+        }
     }
 
     protected buildRenderingContext(content: string): void {
@@ -131,5 +171,5 @@ export abstract class BasePanelModule implements PanelModule {
     protected abstract extractData(content: string): void;
     protected abstract renderContent(activeView: MarkdownView | null): void;
 
-    protected cleanupModuleData(): void {}
+    protected cleanupModuleData(): void { }
 }

@@ -69,7 +69,7 @@ export class FencedDivProcessor implements StructuralProcessor {
         const pm = LongformProjectManager.getInstance();
 
         if (stackItem.label) {
-            const globalRef = pm.getReference(stackItem.label);
+            const globalRef = pm.getReference(stackItem.label, context.filePath || '');
             if (globalRef && globalRef.displayTitle) {
                 finalDisplayName = globalRef.displayTitle;
             }

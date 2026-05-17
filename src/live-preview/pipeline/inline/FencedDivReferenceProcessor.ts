@@ -24,7 +24,7 @@ export class FencedDivReferenceProcessor implements InlineProcessor {
         let match: RegExpExecArray | null;
 
         while ((match = PANDOC_CITATION_REFERENCE.exec(text)) !== null) {
-            const label = this.resolveLabel(match[1], labels);
+            const label = this.resolveLabel(match[1], labels, context.filePath || '');
             if (!label) {
                 continue;
             }
@@ -52,33 +52,34 @@ export class FencedDivReferenceProcessor implements InlineProcessor {
 
     createDecoration(match: InlineMatch, context: ProcessingContext): Decoration {
         const label = typeof match.data.label === 'string' ? match.data.label : '';
-        
+
         let displayName = 'Ref';
         let content = '';
         let isValid = true;
 
+        const filePath = context.filePath || '';
         if (label.startsWith('eq:')) {
             const tagLabel = label.substring(3);
-            const eqRef = LongformProjectManager.getInstance().getEquationReference(tagLabel);
+            const eqRef = LongformProjectManager.getInstance().getEquationReference(tagLabel, filePath);
             isValid = !!eqRef;
             displayName = isValid ? `(${tagLabel})` : `@${label}`;
             content = eqRef?.content || 'Equation not found';
         } else if (label.startsWith('fig:')) {
-            const figRef = LongformProjectManager.getInstance().getFigureReference(label);
+            const figRef = LongformProjectManager.getInstance().getFigureReference(label, filePath);
             isValid = !!figRef;
             displayName = isValid ? (figRef?.displayTitle || label) : `@${label}`;
             content = figRef?.description || figRef?.imagePath || 'Figure not found';
         } else {
             const localReference = context.fencedDivLabels?.get(label);
-            const globalReference = LongformProjectManager.getInstance().getReference(label);
-            
+            const globalReference = LongformProjectManager.getInstance().getReference(label, filePath);
+
             isValid = !!(localReference || globalReference);
-            displayName = isValid 
+            displayName = isValid
                 ? (globalReference?.displayTitle || globalReference?.displayName || localReference?.displayName || 'Div')
                 : `@${label}`;
             content = localReference?.content || globalReference?.content || 'Reference not found';
         }
-        
+
         const region = match.data.region as ContentRegion | undefined;
         const absolutePosition = match.from + (region?.from || 0);
 
@@ -91,28 +92,29 @@ export class FencedDivReferenceProcessor implements InlineProcessor {
                 absolutePosition,
                 context.app,
                 context.component,
-                isValid
+                isValid,
+                filePath
             ),
             inclusive: false
         });
     }
 
-    private resolveLabel(rawLabel: string, labels: Map<string, unknown>): string | undefined {
+    private resolveLabel(rawLabel: string, labels: Map<string, unknown>, filePath: string): string | undefined {
         // Always match labels that look like references (start with known prefixes or just alphanumeric)
         // This allows us to catch invalid labels and color them red.
-        
+
         // If it starts with eq: or fig:, it's definitely a reference attempt
         if (rawLabel.startsWith('eq:') || rawLabel.startsWith('fig:')) {
             return rawLabel;
         }
 
         // If it exists locally or globally, it's valid
-        if (LongformProjectManager.getInstance().getReference(rawLabel)) return rawLabel;
+        if (LongformProjectManager.getInstance().getReference(rawLabel, filePath)) return rawLabel;
         if (labels.has(rawLabel)) return rawLabel;
 
         const trimmedLabel = rawLabel.replace(TRAILING_REFERENCE_PUNCTUATION, '');
-        if (LongformProjectManager.getInstance().getReference(trimmedLabel)) return trimmedLabel;
-        
+        if (LongformProjectManager.getInstance().getReference(trimmedLabel, filePath)) return trimmedLabel;
+
         if (trimmedLabel !== rawLabel && labels.has(trimmedLabel)) {
             return trimmedLabel;
         }

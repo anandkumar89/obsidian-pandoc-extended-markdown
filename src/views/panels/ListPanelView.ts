@@ -1,5 +1,5 @@
 // External libraries
-import { ItemView, WorkspaceLeaf, MarkdownView, HoverLinkSource, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, MarkdownView, HoverLinkSource, setIcon } from 'obsidian';
 
 // Types
 import { PanelModule, PanelTabInfo } from './modules/PanelTypes';
@@ -31,6 +31,7 @@ export class ListPanelView extends ItemView {
     private currentSearchQuery = '';
     private topBarEl: HTMLElement | null = null;
     private moduleActionsEl: HTMLElement | null = null;
+    private toggleActionsEl: HTMLElement | null = null;
     private contentContainerEl: HTMLElement | null = null;
     hoverLinkSource: HoverLinkSource;
     
@@ -143,6 +144,7 @@ export class ListPanelView extends ItemView {
         
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => {
+                this.updateGlobalToggleStates();
                 this.scheduleUpdate();
             })
         );
@@ -155,12 +157,20 @@ export class ListPanelView extends ItemView {
         
         this.registerEvent(
             this.app.workspace.on('file-open', () => {
+                this.updateGlobalToggleStates();
                 this.scheduleUpdate();
             })
         );
         
         this.registerEvent(
             this.app.workspace.on('layout-change', () => {
+                this.scheduleUpdate();
+            })
+        );
+
+        this.registerEvent(
+            this.app.workspace.on('pem:settings-changed' as any, () => {
+                this.updateGlobalToggleStates();
                 this.scheduleUpdate();
             })
         );
@@ -188,10 +198,14 @@ export class ListPanelView extends ItemView {
             cls: CSS_CLASSES.LIST_PANEL_VIEW_CONTAINER
         });
         
-        // Top bar: tabs on left, search and settings on right
+        // Top bar: left wrapper holds tabs & contextual icons, right actions hold search & settings
         this.topBarEl = viewContainer.createDiv({ cls: 'pem-panel-top-bar' });
 
-        const tabsEl = this.topBarEl.createDiv({ cls: 'pem-panel-tabs' });
+        // Left wrapper
+        const leftWrapper = this.topBarEl.createDiv({ cls: 'pem-panel-left-wrapper' });
+
+        // Tabs container (solid background)
+        const tabsEl = leftWrapper.createDiv({ cls: 'pem-panel-tabs' });
 
         // Main modules
         const mainTabsOrder = ['toc', 'fenced-divs', 'equations', 'figures', 'citations'];
@@ -201,6 +215,42 @@ export class ListPanelView extends ItemView {
             this.renderTabButton(tabsEl, panel);
         }
 
+        // Contextual actions beside tabs, grouped and left-aligned
+        const contextualEl = leftWrapper.createDiv({ cls: 'pem-panel-contextual-actions' });
+
+        // Persistent toggles
+        this.toggleActionsEl = contextualEl.createDiv({ cls: 'pem-panel-toggle-actions' });
+
+        // Project-wide toggle (FOLDER/LAYERS)
+        const projectToggleBtn = this.toggleActionsEl.createDiv({ 
+            cls: 'pem-panel-tab pem-project-toggle',
+            attr: { 'aria-label': 'Toggle project-wide items' }
+        });
+        setIcon(projectToggleBtn, 'layers');
+        projectToggleBtn.addEventListener('click', async () => {
+            this.plugin.settings.showProjectWideItems = !this.plugin.settings.showProjectWideItems;
+            await this.plugin.saveSettings();
+            void this.updateView();
+            this.updateGlobalToggleStates();
+        });
+
+        // Preview toggle (LAYOUT-LIST)
+        const previewToggleBtn = this.toggleActionsEl.createDiv({ 
+            cls: 'pem-panel-tab pem-preview-toggle',
+            attr: { 'aria-label': 'Toggle previews' }
+        });
+        setIcon(previewToggleBtn, 'layout-list');
+        previewToggleBtn.addEventListener('click', async () => {
+            this.plugin.settings.showPanelPreviews = !this.plugin.settings.showPanelPreviews;
+            await this.plugin.saveSettings();
+            void this.updateView();
+            this.updateGlobalToggleStates();
+        });
+
+        // Per-panel dynamic actions (emptied on each tab switch)
+        this.moduleActionsEl = contextualEl.createDiv({ cls: 'pem-panel-module-actions' });
+
+        // Right actions: search and settings grouped and flushed right
         const rightActionsEl = this.topBarEl.createDiv({ cls: 'pem-panel-right-actions' });
 
         // Search toggle
@@ -208,7 +258,6 @@ export class ListPanelView extends ItemView {
             cls: 'pem-panel-tab pem-search-toggle',
             attr: { 'aria-label': 'Search' }
         });
-        const { setIcon } = require('obsidian');
         setIcon(searchToggleBtn, 'search');
         
         // Export/Settings
@@ -216,6 +265,8 @@ export class ListPanelView extends ItemView {
         if (exportPanel) {
             this.renderTabButton(rightActionsEl, exportPanel);
         }
+
+        this.updateGlobalToggleStates();
 
         // Search bar (toggleable)
         const searchBarEl = viewContainer.createDiv({ cls: 'pem-panel-search-bar is-hidden' });
@@ -259,15 +310,46 @@ export class ListPanelView extends ItemView {
         this.contentContainerEl = viewContainer.createDiv({
             cls: CSS_CLASSES.LIST_PANEL_CONTENT_CONTAINER
         });
-
-        // Module actions container at the BOTTOM
-        this.moduleActionsEl = viewContainer.createDiv({ cls: 'pem-module-actions-container' });
         
         if (this.panels.length > 0) {
             this.switchToPanel(this.panels[0]);
         }
     }
     
+    /** Resolves the best available MarkdownView, preferring pinned sources. */
+    private resolveActiveView(): MarkdownView | null {
+        const pm = LongformProjectManager.getInstance();
+        const active = this.app.workspace.getActiveViewOfType(MarkdownView);
+        
+        if (active?.file) {
+            this.lastActiveMarkdownView = active;
+        }
+
+        // 1. Pinned standalone file — only follow that file
+        const pinnedFilePath = pm.getPinnedFilePath();
+        if (pinnedFilePath) {
+            const leaves = this.app.workspace.getLeavesOfType('markdown');
+            const leaf = leaves.find(l => (l.view as MarkdownView).file?.path === pinnedFilePath);
+            if (leaf) return leaf.view as MarkdownView;
+            return null;
+        }
+
+        // 2. Pinned project — only follow files in THAT project
+        const pinnedProjectPath = pm.getPinnedProjectPath();
+        if (pinnedProjectPath) {
+            if (active?.file) {
+                const projectPath = pm.getActualProjectPath(active.file.path);
+                if (projectPath === pinnedProjectPath) {
+                    return active;
+                }
+            }
+            return null; // Show project context instead of unrelated file
+        }
+
+        // 3. Fallback — follow active editor
+        return active || this.lastActiveMarkdownView;
+    }
+
     private switchToPanel(panelInfo: PanelTabInfo): void {
         if (this.activePanel === panelInfo.module) {
             return;
@@ -286,18 +368,22 @@ export class ListPanelView extends ItemView {
         this.activePanel = panelInfo.module;
         this.activePanel.setSearchQuery(this.currentSearchQuery);
 
+        const resolvedView = this.resolveActiveView();
+
         // Render module-specific action buttons in the top bar
         if (this.moduleActionsEl) {
             this.moduleActionsEl.empty();
             if (this.activePanel.renderActions) {
-                this.activePanel.renderActions(this.moduleActionsEl, this.lastActiveMarkdownView);
+                this.activePanel.renderActions(this.moduleActionsEl, resolvedView);
             }
         }
         
         if (this.contentContainerEl) {
             this.contentContainerEl.empty();
-            this.activePanel.onActivate(this.contentContainerEl, this.lastActiveMarkdownView);
+            this.activePanel.onActivate(this.contentContainerEl, resolvedView);
         }
+
+        this.updateGlobalToggleStates();
     }
     
     private renderTabButton(container: HTMLElement, panel: PanelTabInfo): void {
@@ -309,7 +395,7 @@ export class ListPanelView extends ItemView {
             }
         });
         
-        const { setIcon } = require('obsidian');
+        
         
         if (panel.id === 'toc') {
             setIcon(tabBtn, 'list');
@@ -345,42 +431,16 @@ export class ListPanelView extends ItemView {
     updateView(): Promise<void> {
         return Promise.resolve().then(() => {
             try {
-                let markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                const pm = LongformProjectManager.getInstance();
-                
-                // If pinned file exists, use it instead of active view
-                const pinnedFilePath = pm.getPinnedFilePath();
-                if (pinnedFilePath) {
-                    const file = this.app.vault.getAbstractFileByPath(pinnedFilePath);
-                    if (file instanceof TFile) {
-                        // We need a MarkdownView. If the file is open, we can find its view.
-                        // If not, we might need a "mock" view or handle null in modules.
-                        const leaves = this.app.workspace.getLeavesOfType('markdown');
-                        const targetLeaf = leaves.find(l => (l.view as MarkdownView).file?.path === pinnedFilePath);
-                        if (targetLeaf) {
-                            markdownView = targetLeaf.view as MarkdownView;
-                        } else {
-                            // If not open, modules should handle null activeView by using the pinned project/file path
-                            markdownView = null;
-                        }
-                    }
-                } else if (markdownView && markdownView.file) {
-                    this.lastActiveMarkdownView = markdownView;
-                } else if (!markdownView) {
-                    // Check if a project is pinned
-                    if (pm.getPinnedProjectPath()) {
-                        markdownView = this.lastActiveMarkdownView;
-                    }
-                }
+                const markdownView = this.resolveActiveView();
                 
                 if (this.activePanel && this.activePanel.shouldUpdate()) {
-                    this.activePanel.onUpdate(markdownView || null);
+                    this.activePanel.onUpdate(markdownView);
                     
                     // Refresh module actions too
                     if (this.moduleActionsEl) {
                         this.moduleActionsEl.empty();
                         if (this.activePanel.renderActions) {
-                            this.activePanel.renderActions(this.moduleActionsEl, markdownView || null);
+                            this.activePanel.renderActions(this.moduleActionsEl, markdownView);
                         }
                     }
                 }
@@ -394,6 +454,46 @@ export class ListPanelView extends ItemView {
     public syncActiveHeading(filePath: string, lineNumber: number): void {
         if (this.activePanel && this.activePanel.id === 'toc' && this.activePanel.setActiveHeading) {
             this.activePanel.setActiveHeading(filePath, lineNumber);
+        }
+    }
+
+    private updateGlobalToggleStates(): void {
+        if (!this.toggleActionsEl) return;
+        
+        const projectBtn = this.toggleActionsEl.querySelector('.pem-project-toggle');
+        const previewBtn = this.toggleActionsEl.querySelector('.pem-preview-toggle');
+        
+        const activeId = this.activePanel?.id;
+
+        // Hide entire toggle area on export/settings tab
+        this.toggleActionsEl.toggleClass('is-hidden', activeId === 'export');
+
+        if (projectBtn) {
+            projectBtn.toggleClass('is-active', !!this.plugin.settings.showProjectWideItems);
+            
+            // Determine project context from actual state, NOT resolveActiveView()
+            const pm = LongformProjectManager.getInstance();
+            const pinnedProject = pm.getPinnedProjectPath();
+            const pinnedFile = pm.getPinnedFilePath();
+            
+            // Check if the actual current editor file is in a project
+            const activeFile = this.app.workspace.getActiveFile();
+            const activeFileInProject = activeFile ? pm.isFileInProject(activeFile.path) : false;
+            
+            // Check if the pinned file belongs to a project
+            const pinnedFileInProject = pinnedFile ? pm.isFileInProject(pinnedFile) : false;
+            
+            const isInProject = !!pinnedProject || activeFileInProject || pinnedFileInProject;
+            
+            projectBtn.toggleClass('is-hidden', !isInProject);
+        }
+        
+        if (previewBtn) {
+            previewBtn.toggleClass('is-active', !!this.plugin.settings.showPanelPreviews);
+            
+            // Preview toggle is visible for blocks, equations, figures
+            const isPreviewSupported = activeId === 'fenced-divs' || activeId === 'equations' || activeId === 'figures';
+            previewBtn.toggleClass('is-hidden', !isPreviewSupported);
         }
     }
 
