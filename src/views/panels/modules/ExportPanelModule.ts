@@ -167,9 +167,11 @@ export class ExportPanelModule extends BasePanelModule {
             e.stopPropagation();
             if (isPinned) {
                 this.plugin.settings.pinnedFilePath = null;
+                new Notice(`Unpinned file`);
             } else {
                 this.plugin.settings.pinnedFilePath = filePath;
                 this.plugin.settings.pinnedProjectPath = null; // Exclusive
+                new Notice(`Pinned file: ${fileName}`);
             }
             await this.plugin.saveSettings();
             this.plugin.app.workspace.trigger('pem:settings-changed');
@@ -277,9 +279,11 @@ export class ExportPanelModule extends BasePanelModule {
                 e.stopPropagation();
                 if (isPinned) {
                     this.plugin.settings.pinnedProjectPath = null;
+                    new Notice(`Unpinned project: ${project.name}`);
                 } else {
                     this.plugin.settings.pinnedProjectPath = project.path;
                     this.plugin.settings.pinnedFilePath = null; // Exclusive
+                    new Notice(`Pinned project: ${project.name}`);
                 }
                 await this.plugin.saveSettings();
                 this.plugin.app.workspace.trigger('pem:settings-changed');

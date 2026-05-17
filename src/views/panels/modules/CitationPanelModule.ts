@@ -35,17 +35,28 @@ export class CitationPanelModule extends BasePanelModule {
     }
 
     protected extractData(content: string): void {
-        this.localCitations = extractCitations(content);
         const pm = LongformProjectManager.getInstance();
-        
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
+        const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        const activeFile = activeView?.file?.path;
+
+        if (pinnedFile) {
+            if (activeView && activeFile === pinnedFile) {
+                this.localCitations = extractCitations(content);
+            } else {
+                this.localCitations = pm.getFileCitations(pinnedFile);
+            }
+        } else {
+            this.localCitations = extractCitations(content);
+        }
+
         // Sync map with global cache for all citekeys (local + project-wide)
         const citekeys = new Set<string>();
         this.localCitations.forEach(c => citekeys.add(c.citekey));
-        
-        const activeFile = this.plugin.app.workspace.getActiveFile();
-        const pinnedPath = pm.getPinnedProjectPath();
-        const filePath = activeFile?.path || pinnedPath || '';
-        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+
+        const filePath = pinnedFile || activeFile || pinnedProject || '';
+        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
         if (isInProject) {
             pm.getProjectCitations(filePath).forEach(c => citekeys.add(c.citekey));
         }
@@ -54,7 +65,7 @@ export class CitationPanelModule extends BasePanelModule {
             const meta = pm.getCitationMetadata(k);
             if (meta) this.citationInfoMap.set(k, meta);
         });
-        
+
         void this.loadCitationInfo();
     }
 
@@ -64,12 +75,14 @@ export class CitationPanelModule extends BasePanelModule {
 
         const citekeys = new Set<string>();
         this.localCitations.forEach(c => citekeys.add(c.citekey));
-        
+
         const pm = LongformProjectManager.getInstance();
-        const activeFile = this.plugin.app.workspace.getActiveFile();
-        const pinnedPath = pm.getPinnedProjectPath();
-        const filePath = activeFile?.path || pinnedPath || '';
-        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
+        const activeFile = this.plugin.app.workspace.getActiveFile()?.path;
+
+        const filePath = pinnedFile || activeFile || pinnedProject || '';
+        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
         if (isInProject) {
             pm.getProjectCitations(filePath).forEach(c => citekeys.add(c.citekey));
         }
@@ -209,16 +222,26 @@ export class CitationPanelModule extends BasePanelModule {
 
     protected renderContent(activeView: MarkdownView | null): void {
         const pm = LongformProjectManager.getInstance();
-        const pinnedPath = pm.getPinnedProjectPath();
-        const filePath = activeView?.file?.path || pinnedPath || '';
-        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
+        const activeFile = activeView?.file?.path;
+
+        const filePath = pinnedFile || activeFile || pinnedProject || '';
+        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
 
         let citekeys: string[] = [];
 
         if (isInProject) {
             citekeys = Array.from(new Set(pm.getProjectCitations(filePath).map(c => c.citekey)));
         } else {
-            citekeys = Array.from(new Set(this.localCitations.map(c => c.citekey)));
+            const targetPath = pinnedFile || activeFile || '';
+            let citationsList: CitationEntry[] = [];
+            if (activeView && activeFile === targetPath) {
+                citationsList = this.localCitations;
+            } else if (targetPath) {
+                citationsList = pm.getFileCitations(targetPath);
+            }
+            citekeys = Array.from(new Set(citationsList.map(c => c.citekey)));
         }
 
         // Apply search filter
@@ -238,7 +261,9 @@ export class CitationPanelModule extends BasePanelModule {
             citekeys.forEach(k => {
                 const occurrences = isInProject
                     ? pm.getProjectCitations(filePath).filter(c => c.citekey === k)
-                    : this.localCitations.filter(c => c.citekey === k);
+                    : (activeView && activeFile === (pinnedFile || activeFile)
+                        ? this.localCitations.filter(c => c.citekey === k)
+                        : pm.getFileCitations(pinnedFile || activeFile || '').filter(c => c.citekey === k));
                 if (occurrences.length > 0) {
                     firstOcc.set(k, occurrences[0].lineNumber);
                 } else {
@@ -262,7 +287,9 @@ export class CitationPanelModule extends BasePanelModule {
         for (const citekey of citekeys) {
             const occurrences = isInProject
                 ? pm.getProjectCitations(filePath).filter(c => c.citekey === citekey)
-                : this.localCitations.filter(c => c.citekey === citekey);
+                : (activeView && activeFile === (pinnedFile || activeFile)
+                    ? this.localCitations.filter(c => c.citekey === citekey)
+                    : pm.getFileCitations(pinnedFile || activeFile || '').filter(c => c.citekey === citekey));
             
             this.renderCitationItem(container, citekey, occurrences, activeView);
         }

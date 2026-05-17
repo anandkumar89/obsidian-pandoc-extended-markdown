@@ -72,13 +72,33 @@ export class LongformProjectManager {
         this.plugin = plugin;
         this.app = plugin.app;
         this.settings = plugin.settings;
-        this.cacheFilePath = normalizePath(this.app.vault.configDir + '/plugins/academic-pandoc-markdown/citekey-cache.json');
-        this.vaultCachePath = normalizePath(this.app.vault.configDir + '/plugins/academic-pandoc-markdown/vault-index.json');
+        const configDir = this.app?.vault ? this.app.vault.configDir : '.obsidian';
+        this.cacheFilePath = normalizePath((configDir || '.obsidian') + '/plugins/academic-pandoc-markdown/citekey-cache.json');
+        this.vaultCachePath = normalizePath((configDir || '.obsidian') + '/plugins/academic-pandoc-markdown/vault-index.json');
     }
 
     public static getInstance(plugin?: PandocExtendedMarkdownPlugin): LongformProjectManager {
-        if (!LongformProjectManager.instance && plugin) {
-            LongformProjectManager.instance = new LongformProjectManager(plugin);
+        if (!LongformProjectManager.instance) {
+            if (plugin) {
+                LongformProjectManager.instance = new LongformProjectManager(plugin);
+            } else {
+                const dummyPlugin = {
+                    app: {
+                        vault: {
+                            configDir: '.obsidian',
+                            getAbstractFileByPath: () => null,
+                            on: () => {},
+                            trigger: () => {}
+                        },
+                        workspace: {
+                            onLayoutReady: () => {},
+                            on: () => {}
+                        }
+                    },
+                    settings: {}
+                } as any;
+                LongformProjectManager.instance = new LongformProjectManager(dummyPlugin);
+            }
         }
         return LongformProjectManager.instance;
     }
@@ -895,6 +915,10 @@ export class LongformProjectManager {
         const projectPath = this.resolveProjectPath(filePath);
         if (!projectPath) return [];
         return this.getFencedDivsForProject(projectPath);
+    }
+
+    public getFileEquations(filePath: string): EquationPanelItem[] {
+        return this.fileEquationCache.get(filePath) || [];
     }
 
     public getProjectEquations(filePath: string): EquationPanelItem[] {

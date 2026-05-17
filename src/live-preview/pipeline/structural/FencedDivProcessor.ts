@@ -50,7 +50,8 @@ export class FencedDivProcessor implements StructuralProcessor {
         if (closingFence && (context.fencedDivStack || []).length > 0) {
             const stack = context.fencedDivStack!;
             const top = stack[stack.length - 1];
-            if (closingFence.length >= top.openingFence.length) {
+            const minOpeningLength = top?.openingFence ? top.openingFence.length : 3;
+            if (closingFence.length >= minOpeningLength) {
                 return this.processClosingFence(line, context);
             }
         }
@@ -237,6 +238,7 @@ export class FencedDivProcessor implements StructuralProcessor {
         if (stack.length === 0) return false;
 
         const top = stack[stack.length - 1];
-        return closingFence.length >= top.openingFence.length;
+        const minOpeningLength = top?.openingFence ? top.openingFence.length : 3;
+        return closingFence.length >= minOpeningLength;
     }
 }

@@ -36,14 +36,41 @@ function ensureCssHelpers(): void {
     property.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 
   if (typeof HTMLElement !== 'undefined') {
-    const elementProto = HTMLElement.prototype as HTMLElement & {
-      setCssProps?: (props: Record<string, string>) => void;
-    };
+    const elementProto = HTMLElement.prototype as any;
     if (typeof elementProto.setCssProps !== 'function') {
       elementProto.setCssProps = function setCssProps(props: Record<string, string>) {
         Object.entries(props).forEach(([property, value]) => {
           this.style.setProperty(toKebabCase(property), value);
         });
+      };
+    }
+    if (typeof elementProto.createEl !== 'function') {
+      elementProto.empty = function empty() {
+        this.innerHTML = '';
+      };
+      elementProto.createEl = function createEl(tag: string, opts?: CreateElOptions) {
+        const newEl = document.createElement(tag);
+        if (opts?.text) newEl.textContent = opts.text;
+        if (opts?.cls) newEl.className = opts.cls;
+        if (opts?.attr) {
+          Object.entries(opts.attr).forEach(([key, value]) => {
+            newEl.setAttribute(key, value);
+          });
+        }
+        this.appendChild(newEl);
+        return newEl;
+      };
+      elementProto.createDiv = function createDiv(opts?: CreateElOptions) {
+        return this.createEl('div', opts);
+      };
+      elementProto.createSpan = function createSpan(opts?: CreateElOptions) {
+        return this.createEl('span', opts);
+      };
+      elementProto.addClass = function addClass(cls: string) {
+        this.classList.add(cls);
+      };
+      elementProto.removeClass = function removeClass(cls: string) {
+        this.classList.remove(cls);
       };
     }
   }
@@ -274,3 +301,24 @@ export const editorLivePreviewField = {
     provide: () => true
   }))
 };
+
+export function normalizePath(path: string): string {
+  return path;
+}
+
+export function setIcon(parent: HTMLElement, iconId: string): void {}
+export function addIcon(id: string, svg: string): void {}
+export function parseYaml(yaml: string): any {
+  return {};
+}
+
+export class TFolder {
+  path: string;
+  name: string;
+}
+
+export class Component {
+  registerEvent() {}
+  registerDomEvent() {}
+  registerInterval() {}
+}

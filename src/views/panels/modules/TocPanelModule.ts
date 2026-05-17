@@ -40,14 +40,24 @@ export class TocPanelModule extends BasePanelModule {
     renderActions(actionsEl: HTMLElement, activeView: MarkdownView | null): void {
         actionsEl.empty();
         const pm = LongformProjectManager.getInstance();
-        const pinnedPath = pm.getPinnedProjectPath();
-        const filePath = activeView?.file?.path || pinnedPath || '';
-        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
+        const activeFile = activeView?.file?.path;
 
-        let sectionsToUse = [...this.sectionItems];
+        const filePath = pinnedFile || activeFile || pinnedProject || '';
+        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
+
+        let sectionsToUse: SectionEntry[] = [];
         const showProject = this.plugin.settings.showProjectWideItems;
-        if (isInProject && (showProject || !activeView)) {
+        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
             sectionsToUse = pm.getProjectSections(filePath);
+        } else {
+            const targetPath = pinnedFile || activeFile || '';
+            if (activeView && activeFile === targetPath) {
+                sectionsToUse = [...this.sectionItems];
+            } else if (targetPath) {
+                sectionsToUse = [...pm.getFileSections(targetPath)];
+            }
         }
 
         const parentKeys: string[] = [];
@@ -93,19 +103,29 @@ export class TocPanelModule extends BasePanelModule {
     protected renderContent(activeView: MarkdownView | null): void {
         if (!this.containerEl) return;
         const pm = LongformProjectManager.getInstance();
-        const pinnedPath = pm.getPinnedProjectPath();
-        const filePath = activeView?.file?.path || pinnedPath || '';
-        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
+        const activeFile = activeView?.file?.path;
+
+        const filePath = pinnedFile || activeFile || pinnedProject || '';
+        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
         const projectPath = filePath ? pm.getProjectPath(filePath) : undefined;
 
         let sections: SectionEntry[];
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (isInProject && (showProject || !activeView)) {
+        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
             // Get all sections across the project
             sections = pm.getProjectSections(filePath);
         } else {
-            sections = [...this.sectionItems];
+            const targetPath = pinnedFile || activeFile || '';
+            if (activeView && activeFile === targetPath) {
+                sections = [...this.sectionItems];
+            } else if (targetPath) {
+                sections = [...pm.getFileSections(targetPath)];
+            } else {
+                sections = [];
+            }
             numberSections(sections);
         }
 

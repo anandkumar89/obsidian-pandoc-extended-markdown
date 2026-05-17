@@ -26,7 +26,7 @@ export class FencedDivHeaderWidget extends BaseWidget {
     protected setContent(element: HTMLElement): void {
         const blockName = this.displayName ? this.displayName.toLowerCase() : 'fenced-div';
         
-        const titleElement = this.createElement('span', `${blockName}-title`);
+        const titleElement = this.createElement('span', `pem-fenced-div-title ${blockName}-title`);
         
         // Render displayName as bold
         const nameSpan = titleElement.createSpan();

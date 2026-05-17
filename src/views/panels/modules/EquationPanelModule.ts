@@ -29,18 +29,26 @@ export class EquationPanelModule extends BasePanelModule {
 
     protected renderContent(activeView: MarkdownView | null): void {
         const pm = LongformProjectManager.getInstance();
-        const pinnedPath = pm.getPinnedProjectPath();
-        const filePath = activeView?.file?.path || pinnedPath || '';
-        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
+        const activeFile = activeView?.file?.path;
+
+        const filePath = pinnedFile || activeFile || pinnedProject || '';
+        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
 
         let itemsToRender: EquationPanelItem[] = [];
 
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (isInProject && (showProject || !activeView)) {
+        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
             itemsToRender = pm.getProjectEquations(filePath);
         } else {
-            itemsToRender = this.equationItems;
+            const targetPath = pinnedFile || activeFile || '';
+            if (activeView && activeFile === targetPath) {
+                itemsToRender = this.equationItems;
+            } else if (targetPath) {
+                itemsToRender = pm.getFileEquations(targetPath);
+            }
         }
 
         if (this.searchQuery) {

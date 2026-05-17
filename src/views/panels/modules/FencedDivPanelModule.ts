@@ -36,16 +36,20 @@ export class FencedDivPanelModule extends BasePanelModule {
     protected renderContent(activeView: MarkdownView | null): void {
         this.lastActiveView = activeView;
         const pm = LongformProjectManager.getInstance();
-        const pinnedPath = pm.getPinnedProjectPath();
-        const filePath = activeView?.file?.path || pinnedPath || '';
-        const isInProject = pinnedPath || (filePath ? pm.isFileInProject(filePath) : false);
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
+        const activeFile = activeView?.file?.path;
+
+        const filePath = pinnedFile || activeFile || pinnedProject || '';
+        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
 
         let itemsToRender: FencedDivPanelItem[] = [];
 
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (isInProject && (showProject || !activeView)) {
-            const globalEntries = pm.getProjectFencedDivs(filePath);
+        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
+            const projectPath = pinnedProject || (activeFile ? pm.getProjectPath(activeFile) : '');
+            const globalEntries = pm.getFencedDivsForProject(projectPath || '');
             itemsToRender = globalEntries.map(e => ({
                 title: e.displayTitle || e.displayName,
                 content: e.content,
@@ -59,7 +63,26 @@ export class FencedDivPanelModule extends BasePanelModule {
                 filePath: e.filePath
             }));
         } else {
-            itemsToRender = this.fencedDivItems.map(item => {
+            const targetPath = pinnedFile || activeFile || '';
+            if (activeView && activeFile === targetPath) {
+                itemsToRender = this.fencedDivItems;
+            } else if (targetPath) {
+                const cached = pm.getFileEntries(targetPath);
+                itemsToRender = cached.map(e => ({
+                    title: e.displayTitle || e.displayName,
+                    content: e.content,
+                    lineNumber: e.lineNumber,
+                    classes: e.classes,
+                    label: e.label,
+                    inlineTitle: e.inlineTitle,
+                    contentLineNumber: e.lineNumber,
+                    contentPosition: { line: e.lineNumber, ch: 0 },
+                    position: { line: e.lineNumber, ch: 0 },
+                    filePath: e.filePath
+                }));
+            }
+
+            itemsToRender = itemsToRender.map(item => {
                  let finalTitle = item.title;
                  let inlineTitle = item.inlineTitle;
                  if (item.label) {
