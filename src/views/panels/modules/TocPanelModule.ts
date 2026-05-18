@@ -114,27 +114,19 @@ export class TocPanelModule extends BasePanelModule {
         let sections: SectionEntry[];
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (pinnedProject) {
-            sections = pm.getProjectSections(pinnedProject);
-        } else if (pinnedFile) {
-            sections = [...pm.getFileSections(pinnedFile)];
-            numberSections(sections);
+        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
+            // Get all sections across the project
+            sections = pm.getProjectSections(filePath);
         } else {
-            const activeFile = activeView?.file?.path;
-            const showProject = this.plugin.settings.showProjectWideItems;
-
-            if (activeFile && pm.isFileInProject(activeFile) && showProject) {
-                sections = pm.getProjectSections(activeFile);
-            } else if (activeFile) {
-                if (activeView && activeFile === activeFile) {
-                    sections = [...this.sectionItems];
-                } else {
-                    sections = [...pm.getFileSections(activeFile)];
-                }
-                numberSections(sections);
+            const targetPath = pinnedFile || activeFile || '';
+            if (activeView && activeFile === targetPath) {
+                sections = [...this.sectionItems];
+            } else if (targetPath) {
+                sections = [...pm.getFileSections(targetPath)];
             } else {
                 sections = [];
             }
+            numberSections(sections);
         }
 
         if (this.searchQuery) {
@@ -641,5 +633,9 @@ export class TocPanelModule extends BasePanelModule {
             // Scroll into view if needed
             targetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
+    }
+
+    protected renderPinned(pinnedProject: string | null, pinnedFile: string | null): void {
+        this.renderContent(null);
     }
 }

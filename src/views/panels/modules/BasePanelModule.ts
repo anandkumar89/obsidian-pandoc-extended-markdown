@@ -82,14 +82,20 @@ export abstract class BasePanelModule implements PanelModule {
         this.containerEl.empty();
 
         const pm = LongformProjectManager.getInstance();
-        const pinnedPath = pm.getPinnedProjectPath() || pm.getPinnedFilePath();
+        const pinnedProject = pm.getPinnedProjectPath();
+        const pinnedFile = pm.getPinnedFilePath();
 
-        if (!pinnedPath && (!activeView || !activeView.file)) {
+        if (pinnedProject || pinnedFile) {
+            this.renderPinned(pinnedProject, pinnedFile);
+            return;
+        }
+
+        if (!activeView || !activeView.file) {
             void this.showNoFileMessage();
             return;
         }
 
-        const content = activeView?.editor ? activeView.editor.getValue() : '';
+        const content = activeView.editor ? activeView.editor.getValue() : '';
         this.extractData(content);
         this.buildRenderingContext(content);
         this.renderContent(activeView);
@@ -170,6 +176,7 @@ export abstract class BasePanelModule implements PanelModule {
 
     protected abstract extractData(content: string): void;
     protected abstract renderContent(activeView: MarkdownView | null): void;
+    protected abstract renderPinned(pinnedProject: string | null, pinnedFile: string | null): void;
 
     protected cleanupModuleData(): void { }
 }

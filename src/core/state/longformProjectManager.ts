@@ -1029,26 +1029,18 @@ export class LongformProjectManager {
         return Array.from(this.globalCitationIndex.keys());
     }
 
-    public getBlocks(filePath?: string): FencedDivProjectEntry[] {
-        const targetPath = filePath || this.settings.pinnedFilePath || this.settings.pinnedProjectPath || '';
-        if (!targetPath) return [];
-
-        const isProject = this.settings.pinnedProjectPath || this.isFileInAnyProject(targetPath);
-        if (isProject) {
-            const projectPath = this.settings.pinnedProjectPath || this.fileToProject.get(targetPath) || '';
+    public getBlocks(projectPath?: string | null, filePath?: string | null): FencedDivProjectEntry[] {
+        if (projectPath) {
             return this.getFencedDivsForProject(projectPath);
-        } else {
-            return this.getFileEntries(targetPath);
         }
+        if (filePath) {
+            return this.getFileEntries(filePath);
+        }
+        return [];
     }
 
-    public getEqns(filePath?: string): EquationPanelItem[] {
-        const targetPath = filePath || this.settings.pinnedFilePath || this.settings.pinnedProjectPath || '';
-        if (!targetPath) return [];
-
-        const isProject = this.settings.pinnedProjectPath || this.isFileInAnyProject(targetPath);
-        if (isProject) {
-            const projectPath = this.settings.pinnedProjectPath || this.fileToProject.get(targetPath) || '';
+    public getEqns(projectPath?: string | null, filePath?: string | null): EquationPanelItem[] {
+        if (projectPath) {
             const scenes = this.projectScenes.get(projectPath);
             if (!scenes) return [];
             const allEntries: EquationPanelItem[] = [];
@@ -1058,18 +1050,15 @@ export class LongformProjectManager {
                 if (entries) allEntries.push(...entries);
             }
             return allEntries;
-        } else {
-            return this.getFileEquations(targetPath);
         }
+        if (filePath) {
+            return this.getFileEquations(filePath);
+        }
+        return [];
     }
 
-    public getFigs(filePath?: string): FigureEntry[] {
-        const targetPath = filePath || this.settings.pinnedFilePath || this.settings.pinnedProjectPath || '';
-        if (!targetPath) return [];
-
-        const isProject = this.settings.pinnedProjectPath || this.isFileInAnyProject(targetPath);
-        if (isProject) {
-            const projectPath = this.settings.pinnedProjectPath || this.fileToProject.get(targetPath) || '';
+    public getFigs(projectPath?: string | null, filePath?: string | null): FigureEntry[] {
+        if (projectPath) {
             const scenes = this.projectScenes.get(projectPath);
             if (!scenes) return [];
             const allEntries: FigureEntry[] = [];
@@ -1079,18 +1068,15 @@ export class LongformProjectManager {
                 if (entries) allEntries.push(...entries);
             }
             return allEntries;
-        } else {
-            return this.getFileFigures(targetPath);
         }
+        if (filePath) {
+            return this.getFileFigures(filePath);
+        }
+        return [];
     }
 
-    public getCitations(filePath?: string): CitationEntry[] {
-        const targetPath = filePath || this.settings.pinnedFilePath || this.settings.pinnedProjectPath || '';
-        if (!targetPath) return [];
-
-        const isProject = this.settings.pinnedProjectPath || this.isFileInAnyProject(targetPath);
-        if (isProject) {
-            const projectPath = this.settings.pinnedProjectPath || this.fileToProject.get(targetPath) || '';
+    public getCitations(projectPath?: string | null, filePath?: string | null): CitationEntry[] {
+        if (projectPath) {
             const scenes = this.projectScenes.get(projectPath);
             if (!scenes) return [];
             const allEntries: CitationEntry[] = [];
@@ -1100,9 +1086,29 @@ export class LongformProjectManager {
                 if (entries) allEntries.push(...entries);
             }
             return allEntries;
-        } else {
-            return this.getFileCitations(targetPath);
         }
+        if (filePath) {
+            return this.getFileCitations(filePath);
+        }
+        return [];
+    }
+
+    public getSections(projectPath?: string | null, filePath?: string | null): SectionEntry[] {
+        if (projectPath) {
+            const scenes = this.projectScenes.get(projectPath);
+            if (!scenes) return [];
+            const allEntries: SectionEntry[] = [];
+            for (const entry of scenes) {
+                const path = entry.path;
+                const entries = this.fileSectionCache.get(path);
+                if (entries) allEntries.push(...entries);
+            }
+            return allEntries;
+        }
+        if (filePath) {
+            return this.getFileSections(filePath);
+        }
+        return [];
     }
 
     public async rescanProject(projectPath: string): Promise<void> {

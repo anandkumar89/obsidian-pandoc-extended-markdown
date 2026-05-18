@@ -40,20 +40,14 @@ export class FigurePanelModule extends BasePanelModule {
 
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (pinnedProject || pinnedFile) {
-            itemsToRender = pm.getFigs();
+        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
+            itemsToRender = pm.getProjectFigures(filePath);
         } else {
-            const activeFile = activeView?.file?.path;
-            const showProject = this.plugin.settings.showProjectWideItems;
-
-            if (activeFile && pm.isFileInProject(activeFile) && showProject) {
-                itemsToRender = pm.getProjectFigures(activeFile);
-            } else if (activeFile) {
-                if (activeView && activeFile === activeFile) {
-                    itemsToRender = this.figureItems;
-                } else {
-                    itemsToRender = pm.getFileFigures(activeFile);
-                }
+            const targetPath = pinnedFile || activeFile || '';
+            if (activeView && activeFile === targetPath) {
+                itemsToRender = this.figureItems;
+            } else if (targetPath) {
+                itemsToRender = pm.getFileFigures(targetPath);
             }
         }
 
@@ -165,5 +159,9 @@ export class FigurePanelModule extends BasePanelModule {
         };
 
         element.addEventListener('click', clickHandler, { signal: this.abortController?.signal });
+    }
+
+    protected renderPinned(pinnedProject: string | null, pinnedFile: string | null): void {
+        this.renderContent(null);
     }
 }

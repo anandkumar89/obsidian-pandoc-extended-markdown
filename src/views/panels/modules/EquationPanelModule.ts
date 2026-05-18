@@ -40,20 +40,14 @@ export class EquationPanelModule extends BasePanelModule {
 
         const showProject = this.plugin.settings.showProjectWideItems;
 
-        if (pinnedProject || pinnedFile) {
-            itemsToRender = pm.getEqns();
+        if (pinnedProject || (activeFile && pm.isFileInProject(activeFile) && showProject)) {
+            itemsToRender = pm.getProjectEquations(filePath);
         } else {
-            const activeFile = activeView?.file?.path;
-            const showProject = this.plugin.settings.showProjectWideItems;
-
-            if (activeFile && pm.isFileInProject(activeFile) && showProject) {
-                itemsToRender = pm.getProjectEquations(activeFile);
-            } else if (activeFile) {
-                if (activeView && activeFile === activeFile) {
-                    itemsToRender = this.equationItems;
-                } else {
-                    itemsToRender = pm.getFileEquations(activeFile);
-                }
+            const targetPath = pinnedFile || activeFile || '';
+            if (activeView && activeFile === targetPath) {
+                itemsToRender = this.equationItems;
+            } else if (targetPath) {
+                itemsToRender = pm.getFileEquations(targetPath);
             }
         }
 
@@ -154,5 +148,9 @@ export class EquationPanelModule extends BasePanelModule {
         };
 
         element.addEventListener('click', clickHandler, { signal: this.abortController?.signal });
+    }
+
+    protected renderPinned(pinnedProject: string | null, pinnedFile: string | null): void {
+        this.renderContent(null);
     }
 }
