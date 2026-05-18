@@ -346,8 +346,4 @@ export class ExportPanelModule extends BasePanelModule {
             }
         }
     }
-
-    protected renderPinned(pinnedProject: string | null, pinnedFile: string | null): void {
-        this.renderContent(null);
-    }
 }

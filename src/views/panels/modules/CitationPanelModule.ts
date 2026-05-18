@@ -434,28 +434,4 @@ export class CitationPanelModule extends BasePanelModule {
             handleError(error, 'Jump to citation');
         }
     }
-
-    protected renderPinned(pinnedProject: string | null, pinnedFile: string | null): void {
-        const pm = LongformProjectManager.getInstance();
-        const filePath = pinnedFile || pinnedProject || '';
-        const isInProject = pinnedProject || (filePath ? pm.isFileInProject(filePath) : false);
-
-        if (isInProject) {
-            this.localCitations = pm.getProjectCitations(filePath);
-        } else if (pinnedFile) {
-            this.localCitations = pm.getFileCitations(pinnedFile);
-        } else {
-            this.localCitations = [];
-        }
-
-        const citekeys = new Set<string>();
-        this.localCitations.forEach(c => citekeys.add(c.citekey));
-        citekeys.forEach(k => {
-            const meta = pm.getCitationMetadata(k);
-            if (meta) this.citationInfoMap.set(k, meta);
-        });
-
-        void this.loadCitationInfo();
-        this.renderContent(null);
-    }
 }

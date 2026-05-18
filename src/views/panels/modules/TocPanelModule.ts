@@ -634,8 +634,4 @@ export class TocPanelModule extends BasePanelModule {
             targetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
     }
-
-    protected renderPinned(pinnedProject: string | null, pinnedFile: string | null): void {
-        this.renderContent(null);
-    }
 }

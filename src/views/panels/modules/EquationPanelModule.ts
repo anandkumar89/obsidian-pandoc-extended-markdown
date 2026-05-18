@@ -149,8 +149,4 @@ export class EquationPanelModule extends BasePanelModule {
 
         element.addEventListener('click', clickHandler, { signal: this.abortController?.signal });
     }
-
-    protected renderPinned(pinnedProject: string | null, pinnedFile: string | null): void {
-        this.renderContent(null);
-    }
 }
